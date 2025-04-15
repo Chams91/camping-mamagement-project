@@ -37,10 +37,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         body {
             background-color: #f5f5f5;
             color: #333;
+        }
+        
+        header {
+            background-color: #2a593d;
+            padding: 20px 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        nav {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+        }
+        
+        .logo {
+            color: white;
+            font-weight: bold;
+            font-size: 24px;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 30px;
+        }
+        
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            font-size: 16px;
+            transition: color 0.3s;
+        }
+        
+        .nav-links a:hover {
+            color: #c8e6c9;
+        }
+
+        /* Login form styles */
+        .main-content {
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
+            min-height: calc(100vh - 70px);
             padding: 20px;
         }
         
@@ -128,33 +169,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Connexion</h1>
-        <p class="register-link">Pas de compte ? <a href="register.php">Créez un compte</a></p>
-        
-        <?php if ($error): ?>
-            <div class="error-message" style="text-align: center; margin-bottom: 20px;">
-                <?= htmlspecialchars($error) ?>
+    <header>
+        <nav>
+            <div class="logo">Camping Nature</div>
+            <div class="nav-links">
+                <a href="home.php">Accueil</a>
+                <a href="reservation.php">Réserver</a>
+                <?php if (isLoggedIn()): ?>
+                    <a href="logout.php">Déconnexion</a>
+                    <span style="color:white;">Bonjour, <?= htmlspecialchars($_SESSION['username']) ?></span>
+                <?php else: ?>
+                    <a href="login.php">Connexion</a>
+                    <a href="register.php">Connexion</a>
+                <?php endif; ?>
             </div>
-        <?php endif; ?>
-        
-        <hr>
-        
-        <form method="post">
-            <div class="form-group">
-                <label for="username">Nom d'utilisateur</label>
-                <input type="text" id="username" name="username" required>
-            </div>
+        </nav>
+    </header>
+
+    <div class="main-content">
+        <div class="container">
+            <h1>Connexion</h1>
+            <p class="register-link">Pas de compte ? <a href="register.php">Créez un compte</a></p>
             
-            <div class="form-group">
-                <label for="password">Mot de passe</label>
-                <input type="password" id="password" name="password" required>
-            </div>
+            <?php if ($error): ?>
+                <div class="error-message" style="text-align: center; margin-bottom: 20px;">
+                    <?= htmlspecialchars($error) ?>
+                </div>
+            <?php endif; ?>
             
-            <button type="submit" class="submit-btn">Se connecter</button>
-        </form>
-        
-        <hr>
+            <hr>
+            
+            <form method="post">
+                <div class="form-group">
+                    <label for="username">Nom d'utilisateur</label>
+                    <input type="text" id="username" name="username" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Mot de passe</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+                
+                <button type="submit" class="submit-btn">Se connecter</button>
+            </form>
+            
+            <hr>
+        </div>
     </div>
 </body>
 </html>
