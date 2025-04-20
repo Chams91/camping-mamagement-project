@@ -105,6 +105,12 @@ $logged_in = isLoggedIn(); // Check login status without redirect
                 <a href="home.php">Accueil</a>
                 <a href="reservation.php">Réserver</a>
                 <?php if ($logged_in): ?>
+                    <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'super_admin'): ?>
+                        <a href="superadmin.php">Espace Super Admin</a>
+                    <?php endif; ?>
+                    <?php if (isset($_SESSION['role']) && ($_SESSION['role'] === 'admin' || $_SESSION['role'] === 'super_admin')): ?>
+                        <a href="admin.php">Espace Admin</a>
+                    <?php endif; ?>
                     <a href="logout.php">Déconnexion</a>
                     <span style="color:white;">Bonjour, <?= htmlspecialchars($_SESSION['username']) ?></span>
                 <?php else: ?>

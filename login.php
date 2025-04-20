@@ -180,7 +180,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <span style="color:white;">Bonjour, <?= htmlspecialchars($_SESSION['username']) ?></span>
                 <?php else: ?>
                     <a href="login.php">Connexion</a>
-                    <a href="register.php">Connexion</a>
+                    <a href="register.php">Créer un compte</a>
                 <?php endif; ?>
             </div>
         </nav>
