@@ -13,17 +13,21 @@ if (!isset($_SESSION['role']) || ($_SESSION['role'] !== 'admin' && $_SESSION['ro
 
 require 'includes/auth.php';
 
-// Handle activation/deactivation/deletion requests
+// Handle activation/deactivation/deletion/role change requests
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['action']) && isset($_POST['user_id'])) {
         $action = $_POST['action'];
         $user_id = intval($_POST['user_id']);
 
         // Prevent admins from performing actions on themselves
-        if ($user_id === $_SESSION['user_id'] && $action === 'deactivate') {
-            $error_message = "Vous ne pouvez pas désactiver votre propre compte.";
-        } elseif ($user_id === $_SESSION['user_id'] && $action === 'delete') {
-            $error_message = "Vous ne pouvez pas supprimer votre propre compte.";
+        if ($user_id === $_SESSION['user_id']) {
+            if ($action === 'deactivate') {
+                $error_message = "Vous ne pouvez pas désactiver votre propre compte.";
+            } elseif ($action === 'delete') {
+                $error_message = "Vous ne pouvez pas supprimer votre propre compte.";
+            } elseif ($action === 'promote_admin' || $action === 'promote_super_admin' || $action === 'demote_admin') {
+                $error_message = "Vous ne pouvez pas modifier le rôle de votre propre compte.";
+            }
         } else {
             if ($action === 'activate') {
                 $result = activateUser($user_id);
@@ -45,6 +49,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $success_message = "Utilisateur supprimé avec succès.";
                 } else {
                     $error_message = "Échec de la suppression de l'utilisateur ou vous ne pouvez pas supprimer le dernier super_admin.";
+                }
+            } elseif ($action === 'promote_admin') {
+                // Only super_admins can promote to admin
+                if ($_SESSION['role'] === 'super_admin') {
+                    $result = changeUserRole($user_id, 'admin');
+                    if ($result) {
+                        $success_message = "Utilisateur promu en admin avec succès.";
+                    } else {
+                        $error_message = "Échec de la promotion de l'utilisateur en admin.";
+                    }
+                } else {
+                    $error_message = "Vous n'avez pas les permissions nécessaires pour promouvoir cet utilisateur en admin.";
+                }
+            } elseif ($action === 'demote_admin') {
+                // Only super_admins can demote to user
+                if ($_SESSION['role'] === 'super_admin') {
+                    $result = changeUserRole($user_id, 'user');
+                    if ($result) {
+                        $success_message = "Admin rétrogradé en utilisateur avec succès.";
+                    } else {
+                        $error_message = "Échec de la rétrogradation de l'admin en utilisateur.";
+                    }
+                } else {
+                    $error_message = "Vous n'avez pas les permissions nécessaires pour rétrograder cet admin.";
+                }
+            } elseif ($action === 'promote_super_admin') {
+                // Only super_admins can promote to super_admin
+                if ($_SESSION['role'] === 'super_admin') {
+                    $result = changeUserRole($user_id, 'super_admin');
+                    if ($result) {
+                        $success_message = "Utilisateur promu en super admin avec succès.";
+                    } else {
+                        $error_message = "Échec de la promotion de l'utilisateur en super admin.";
+                    }
+                } else {
+                    $error_message = "Vous n'avez pas les permissions nécessaires pour promouvoir cet utilisateur en super admin.";
                 }
             }
         }
@@ -189,6 +229,30 @@ $users = getAllUsers();
             background-color: #333333;
         }
 
+        .promote-admin-btn {
+            background-color: #2196F3;
+        }
+
+        .promote-admin-btn:hover {
+            background-color: #0b7dda;
+        }
+
+        .demote-admin-btn {
+            background-color: #ff9800;
+        }
+
+        .demote-admin-btn:hover {
+            background-color: #e68900;
+        }
+
+        .promote-superadmin-btn {
+            background-color: #9c27b0;
+        }
+
+        .promote-superadmin-btn:hover {
+            background-color: #7b1fa2;
+        }
+
         /* Message Styles */
         .message {
             margin-top: 20px;
@@ -295,6 +359,46 @@ $users = getAllUsers();
                                         <input type="hidden" name="action" value="activate">
                                         <button type="submit" class="action-btn activate-btn">Activer</button>
                                     </form>
+                                <?php endif; ?>
+
+                                <?php if ($_SESSION['role'] === 'super_admin'): ?>
+                                    <?php if ($user['role'] === 'user'): ?>
+                                        <!-- Promote to Admin -->
+                                        <form method="POST" style="display:inline;">
+                                            <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
+                                            <input type="hidden" name="action" value="promote_admin">
+                                            <button type="submit" class="action-btn promote-admin-btn" onclick="return confirm('Êtes-vous sûr de vouloir promouvoir cet utilisateur en admin ?');">Promouvoir en Admin</button>
+                                        </form>
+                                        
+                                        <!-- Promote to Super Admin -->
+                                        <form method="POST" style="display:inline;">
+                                            <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
+                                            <input type="hidden" name="action" value="promote_super_admin">
+                                            <button type="submit" class="action-btn promote-superadmin-btn" onclick="return confirm('Êtes-vous sûr de vouloir promouvoir cet utilisateur en super admin ?');">Promouvoir en Super Admin</button>
+                                        </form>
+                                    <?php elseif ($user['role'] === 'admin'): ?>
+                                        <!-- Demote to User -->
+                                        <form method="POST" style="display:inline;">
+                                            <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
+                                            <input type="hidden" name="action" value="demote_admin">
+                                            <button type="submit" class="action-btn demote-admin-btn" onclick="return confirm('Êtes-vous sûr de vouloir rétrograder cet admin en utilisateur ?');">Rétrograder en Utilisateur</button>
+                                        </form>
+
+                                        <!-- Promote to Super Admin -->
+                                        <form method="POST" style="display:inline;">
+                                            <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
+                                            <input type="hidden" name="action" value="promote_super_admin">
+                                            <button type="submit" class="action-btn promote-superadmin-btn" onclick="return confirm('Êtes-vous sûr de vouloir promouvoir cet admin en super admin ?');">Promouvoir en Super Admin</button>
+                                        </form>
+                                    <?php elseif ($user['role'] === 'super_admin'): ?>
+                                        <!-- Optionally, allow demoting super_admin to admin -->
+                                        <!-- Ensure at least one super_admin remains -->
+                                        <form method="POST" style="display:inline;">
+                                            <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
+                                            <input type="hidden" name="action" value="demote_admin">
+                                            <button type="submit" class="action-btn demote-admin-btn" onclick="return confirm('Êtes-vous sûr de vouloir rétrograder ce super admin en admin ?');">Rétrograder en Admin</button>
+                                        </form>
+                                    <?php endif; ?>
                                 <?php endif; ?>
 
                                 <!-- Delete Button (Visible to Admins and Super Admins) -->

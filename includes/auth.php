@@ -166,4 +166,56 @@ function deleteUser($user_id) {
         return false;
     }
 }
+
+/**
+ * Change the role of a user.
+ *
+ * @param int $user_id The ID of the user whose role is to be changed.
+ * @param string $new_role The new role to assign ('user', 'admin', 'super_admin').
+ * @return bool Returns true on success, false on failure.
+ */
+function changeUserRole($user_id, $new_role) {
+    global $pdo;
+    try {
+        // Prevent changing own role
+        if ($_SESSION['user_id'] == $user_id) {
+            return false;
+        }
+
+        // Validate new role
+        $valid_roles = ['user', 'admin', 'super_admin'];
+        if (!in_array($new_role, $valid_roles)) {
+            return false;
+        }
+
+        // Get current role of the user
+        $stmt = $pdo->prepare("SELECT role FROM users WHERE id = ?");
+        $stmt->execute([$user_id]);
+        $current_role = $stmt->fetchColumn();
+
+        // If demoting from super_admin, ensure at least one remains
+        if ($current_role === 'super_admin' && $new_role !== 'super_admin') {
+            $stmt = $pdo->prepare("SELECT COUNT(*) FROM users WHERE role = 'super_admin' AND is_active = 1");
+            $stmt->execute();
+            $count = $stmt->fetchColumn();
+
+            if ($count <= 1) {
+                // Prevent demoting the last active super_admin
+                return false;
+            }
+        }
+
+        // If promoting to super_admin, ensure the current user is a super_admin
+        if ($new_role === 'super_admin' && $_SESSION['role'] !== 'super_admin') {
+            return false;
+        }
+
+        // Proceed to change the role
+        $stmt = $pdo->prepare("UPDATE users SET role = ? WHERE id = ?");
+        return $stmt->execute([$new_role, $user_id]);
+    } catch (PDOException $e) {
+        error_log("Failed to change user role: " . $e->getMessage());
+        return false;
+    }
+}
 ?>
