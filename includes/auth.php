@@ -127,4 +127,43 @@ function deactivateUser($user_id) {
         return false;
     }
 }
+
+/**
+ * Delete a user from the database.
+ *
+ * @param int $user_id The ID of the user to delete.
+ * @return bool Returns true on success, false on failure.
+ */
+function deleteUser($user_id) {
+    global $pdo;
+    try {
+        // Prevent deleting self
+        if ($_SESSION['user_id'] == $user_id) {
+            return false;
+        }
+
+        // If deleting a super_admin, ensure at least one remains
+        $stmt = $pdo->prepare("SELECT role FROM users WHERE id = ?");
+        $stmt->execute([$user_id]);
+        $role = $stmt->fetchColumn();
+
+        if ($role === 'super_admin') {
+            $stmt = $pdo->prepare("SELECT COUNT(*) FROM users WHERE role = 'super_admin' AND id != ? AND is_active = 1");
+            $stmt->execute([$user_id]);
+            $count = $stmt->fetchColumn();
+
+            if ($count < 1) {
+                // Prevent deleting the last active super_admin
+                return false;
+            }
+        }
+
+        // Proceed to delete the user
+        $stmt = $pdo->prepare("DELETE FROM users WHERE id = ?");
+        return $stmt->execute([$user_id]);
+    } catch (PDOException $e) {
+        error_log("Failed to delete user: " . $e->getMessage());
+        return false;
+    }
+}
 ?>

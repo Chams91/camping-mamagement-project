@@ -1,7 +1,7 @@
 <?php
-// ini_set('display_errors', 1);
-// ini_set('display_startup_errors', 1);
-// error_reporting(E_ALL);
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 
 session_start();
 
@@ -13,15 +13,17 @@ if (!isset($_SESSION['role']) || ($_SESSION['role'] !== 'admin' && $_SESSION['ro
 
 require 'includes/auth.php';
 
-// Handle activation/deactivation requests
+// Handle activation/deactivation/deletion requests
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['action']) && isset($_POST['user_id'])) {
         $action = $_POST['action'];
         $user_id = intval($_POST['user_id']);
 
-        // Prevent admins from deactivating themselves
-        if ($user_id === $_SESSION['user_id']) {
+        // Prevent admins from performing actions on themselves
+        if ($user_id === $_SESSION['user_id'] && $action === 'deactivate') {
             $error_message = "Vous ne pouvez pas désactiver votre propre compte.";
+        } elseif ($user_id === $_SESSION['user_id'] && $action === 'delete') {
+            $error_message = "Vous ne pouvez pas supprimer votre propre compte.";
         } else {
             if ($action === 'activate') {
                 $result = activateUser($user_id);
@@ -35,7 +37,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($result) {
                     $success_message = "Utilisateur désactivé avec succès.";
                 } else {
-                    $error_message = "Échec de la désactivation de l'utilisateur.";
+                    $error_message = "Échec de la désactivation de l'utilisateur ou vous ne pouvez pas désactiver le dernier super_admin.";
+                }
+            } elseif ($action === 'delete') {
+                $result = deleteUser($user_id);
+                if ($result) {
+                    $success_message = "Utilisateur supprimé avec succès.";
+                } else {
+                    $error_message = "Échec de la suppression de l'utilisateur ou vous ne pouvez pas supprimer le dernier super_admin.";
                 }
             }
         }
@@ -153,6 +162,7 @@ $users = getAllUsers();
             color: white;
             font-size: 14px;
             transition: background-color 0.3s;
+            margin-right: 5px;
         }
 
         .activate-btn {
@@ -169,6 +179,14 @@ $users = getAllUsers();
 
         .deactivate-btn:hover {
             background-color: #da190b;
+        }
+
+        .delete-btn {
+            background-color: #555555;
+        }
+
+        .delete-btn:hover {
+            background-color: #333333;
         }
 
         /* Message Styles */
@@ -200,6 +218,7 @@ $users = getAllUsers();
             .action-btn {
                 padding: 6px 12px;
                 font-size: 12px;
+                margin-bottom: 5px;
             }
 
             h1 {
@@ -251,7 +270,7 @@ $users = getAllUsers();
                     <th>Email</th>
                     <th>Rôle</th>
                     <th>Statut</th>
-                    <th>Action</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -275,6 +294,15 @@ $users = getAllUsers();
                                         <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
                                         <input type="hidden" name="action" value="activate">
                                         <button type="submit" class="action-btn activate-btn">Activer</button>
+                                    </form>
+                                <?php endif; ?>
+
+                                <!-- Delete Button (Visible to Admins and Super Admins) -->
+                                <?php if ($_SESSION['role'] === 'super_admin' || $_SESSION['role'] === 'admin'): ?>
+                                    <form method="POST" style="display:inline;">
+                                        <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
+                                        <input type="hidden" name="action" value="delete">
+                                        <button type="submit" class="action-btn delete-btn" onclick="return confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ? Cette action est irréversible.');">Supprimer</button>
                                     </form>
                                 <?php endif; ?>
                             </td>
