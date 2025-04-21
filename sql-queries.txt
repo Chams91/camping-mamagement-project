@@ -1,4 +1,4 @@
-#create user
+#create users
 INSERT INTO users 
 (username, email, password, role, firstname, lastname, created_at)
 VALUES (
@@ -22,4 +22,5 @@ CREATE TABLE users (
     lastname VARCHAR(50),
     role ENUM('user','admin','super_admin') NOT NULL DEFAULT 'user',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
 );
