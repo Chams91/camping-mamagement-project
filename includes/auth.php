@@ -218,4 +218,80 @@ function changeUserRole($user_id, $new_role) {
         return false;
     }
 }
+
+// locations management
+
+/**
+ * Fetch all locations from the database.
+ *
+ * @return array|false Returns an array of locations or false on failure.
+ */
+function getAllLocations() {
+    global $pdo;
+    try {
+        $stmt = $pdo->prepare("SELECT * FROM locations ORDER BY id ASC");
+        $stmt->execute();
+        return $stmt->fetchAll();
+    } catch (PDOException $e) {
+        error_log("Failed to fetch locations: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Add a new location to the database.
+ *
+ * @param string $type Type of accommodation ('tente', 'caravane', 'chalet').
+ * @param float $price_per_night Price per night.
+ * @param int $capacity Capacity of the location.
+ * @return bool Returns true on success, false on failure.
+ */
+function addLocation($type, $price_per_night, $capacity) {
+    global $pdo;
+    try {
+        $stmt = $pdo->prepare("INSERT INTO locations (type, price_per_night, capacity) VALUES (?, ?, ?)");
+        return $stmt->execute([$type, $price_per_night, $capacity]);
+    } catch (PDOException $e) {
+        error_log("Failed to add location: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Update an existing location in the database.
+ *
+ * @param int $id ID of the location to update.
+ * @param string $type New type of accommodation.
+ * @param float $price_per_night New price per night.
+ * @param int $capacity New capacity.
+ * @return bool Returns true on success, false on failure.
+ */
+function updateLocation($id, $type, $price_per_night, $capacity) {
+    global $pdo;
+    try {
+        $stmt = $pdo->prepare("UPDATE locations SET type = ?, price_per_night = ?, capacity = ? WHERE id = ?");
+        return $stmt->execute([$type, $price_per_night, $capacity, $id]);
+    } catch (PDOException $e) {
+        error_log("Failed to update location: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Delete a location from the database.
+ *
+ * @param int $id ID of the location to delete.
+ * @return bool Returns true on success, false on failure.
+ */
+function deleteLocation($id) {
+    global $pdo;
+    try {
+        $stmt = $pdo->prepare("DELETE FROM locations WHERE id = ?");
+        return $stmt->execute([$id]);
+    } catch (PDOException $e) {
+        error_log("Failed to delete location: " . $e->getMessage());
+        return false;
+    }
+}
+
 ?>

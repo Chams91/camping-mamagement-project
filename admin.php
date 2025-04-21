@@ -13,6 +13,10 @@ if (!isset($_SESSION['role']) || ($_SESSION['role'] !== 'admin' && $_SESSION['ro
 
 require 'includes/auth.php';
 
+// Initialize messages
+$success_message = '';
+$error_message = '';
+
 // Handle activation/deactivation/deletion/role change requests
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['action']) && isset($_POST['user_id'])) {
@@ -91,15 +95,66 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Fetch all users
-$users = getAllUsers();
-?>
+// Handle location management requests
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['location_action'])) {
+    $location_action = $_POST['location_action'];
 
+    if ($location_action === 'add_location') {
+        $type = $_POST['type'];
+        $price_per_night = floatval($_POST['price_per_night']);
+        $capacity = intval($_POST['capacity']);
+
+        if ($type && $price_per_night > 0 && $capacity > 0) {
+            $result = addLocation($type, $price_per_night, $capacity);
+            if ($result) {
+                $success_message = "Emplacement ajouté avec succès.";
+            } else {
+                $error_message = "Échec de l'ajout de l'emplacement.";
+            }
+        } else {
+            $error_message = "Veuillez remplir correctement tous les champs pour ajouter un emplacement.";
+        }
+    } elseif ($location_action === 'edit_location') {
+        $id = intval($_POST['id']);
+        $type = $_POST['type'];
+        $price_per_night = floatval($_POST['price_per_night']);
+        $capacity = intval($_POST['capacity']);
+
+        if ($id > 0 && $type && $price_per_night > 0 && $capacity > 0) {
+            $result = updateLocation($id, $type, $price_per_night, $capacity);
+            if ($result) {
+                $success_message = "Emplacement mis à jour avec succès.";
+            } else {
+                $error_message = "Échec de la mise à jour de l'emplacement.";
+            }
+        } else {
+            $error_message = "Veuillez remplir correctement tous les champs pour mettre à jour l'emplacement.";
+        }
+    } elseif ($location_action === 'delete_location') {
+        $id = intval($_POST['id']);
+
+        if ($id > 0) {
+            $result = deleteLocation($id);
+            if ($result) {
+                $success_message = "Emplacement supprimé avec succès.";
+            } else {
+                $error_message = "Échec de la suppression de l'emplacement.";
+            }
+        } else {
+            $error_message = "ID d'emplacement invalide pour la suppression.";
+        }
+    }
+}
+
+// Fetch all users and locations
+$users = getAllUsers();
+$locations = getAllLocations();
+?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Admin Panel - Gestion des Utilisateurs</title>
+    <title>Admin Panel - Gestion</title>
     <style>
         /* Common Styles */
         body {
@@ -163,12 +218,21 @@ $users = getAllUsers();
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
 
-        h1 {
+        h1, h2 {
             color: #2a593d;
+            font-weight: bold;
+        }
+
+        h1 {
             font-size: 32px;
             margin-bottom: 20px;
-            font-weight: bold;
             text-align: center;
+        }
+
+        h2 {
+            font-size: 24px;
+            margin-top: 40px;
+            margin-bottom: 20px;
         }
 
         /* Table Styles */
@@ -195,14 +259,14 @@ $users = getAllUsers();
 
         /* Button Styles */
         .action-btn {
-            padding: 8px 16px;
+            padding: 8px 12px;
             border: none;
             border-radius: 4px;
             cursor: pointer;
             color: white;
             font-size: 14px;
-            transition: background-color 0.3s;
             margin-right: 5px;
+            transition: background-color 0.3s;
         }
 
         .activate-btn {
@@ -253,6 +317,38 @@ $users = getAllUsers();
             background-color: #7b1fa2;
         }
 
+        /* Form Styles */
+        .form-container {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f2f2f2;
+            border-radius: 8px;
+        }
+
+        .form-container input[type="text"],
+        .form-container input[type="number"],
+        .form-container select {
+            width: 100%;
+            padding: 8px 12px;
+            margin: 8px 0 16px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .form-container input[type="submit"] {
+            background-color: #2a593d;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .form-container input[type="submit"]:hover {
+            background-color: #1e462a;
+        }
+
         /* Message Styles */
         .message {
             margin-top: 20px;
@@ -280,7 +376,7 @@ $users = getAllUsers();
             }
 
             .action-btn {
-                padding: 6px 12px;
+                padding: 6px 10px;
                 font-size: 12px;
                 margin-bottom: 5px;
             }
@@ -289,9 +385,17 @@ $users = getAllUsers();
                 font-size: 28px;
             }
 
+            h2 {
+                font-size: 20px;
+            }
+
             th, td {
                 padding: 10px;
                 font-size: 14px;
+            }
+
+            .form-container input[type="submit"] {
+                width: 100%;
             }
         }
     </style>
@@ -309,7 +413,7 @@ $users = getAllUsers();
                 <?php endif; ?>
                 
                 <a href="logout.php">Déconnexion</a>
-                <span>Bonjour, <?= htmlspecialchars($_SESSION['username']) ?></span>
+                <span style="color:white;">Bonjour, <?= htmlspecialchars($_SESSION['username']) ?></span>
             </div>
         </nav>
     </header>
@@ -318,14 +422,16 @@ $users = getAllUsers();
         <h1>Gestion des Utilisateurs</h1>
 
         <!-- Display Success or Error Messages -->
-        <?php if (isset($success_message)): ?>
+        <?php if ($success_message): ?>
             <div class="message success"><?= htmlspecialchars($success_message) ?></div>
         <?php endif; ?>
 
-        <?php if (isset($error_message)): ?>
+        <?php if ($error_message): ?>
             <div class="message error"><?= htmlspecialchars($error_message) ?></div>
         <?php endif; ?>
 
+        <!-- Users Management Section -->
+        <h2>Liste des Utilisateurs</h2>
         <table>
             <thead>
                 <tr>
@@ -419,6 +525,123 @@ $users = getAllUsers();
                 <?php endif; ?>
             </tbody>
         </table>
+
+        <!-- Locations Management Section -->
+        <h2>Gestion des Emplacements</h2>
+
+        <!-- Add New Location Form -->
+        <div class="form-container">
+            <h3>Ajouter un Nouvel Emplacement</h3>
+            <form method="POST">
+                <input type="hidden" name="location_action" value="add_location">
+                
+                <label for="type">Type d'Emplacement:</label>
+                <select name="type" id="type" required>
+                    <option value="">--Sélectionnez--</option>
+                    <option value="tente">Tente</option>
+                    <option value="caravane">Caravane</option>
+                    <option value="chalet">Chalet</option>
+                </select>
+
+                <label for="price_per_night">Prix par Nuit (€):</label>
+                <input type="number" step="0.01" name="price_per_night" id="price_per_night" required>
+
+                <label for="capacity">Capacité:</label>
+                <input type="number" name="capacity" id="capacity" required>
+
+                <input type="submit" value="Ajouter Emplacement">
+            </form>
+        </div>
+
+        <!-- Locations Table -->
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Type</th>
+                    <th>Prix par Nuit (€)</th>
+                    <th>Capacité</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if ($locations): ?>
+                    <?php foreach ($locations as $location): ?>
+                        <tr>
+                            <td><?= htmlspecialchars($location['id']) ?></td>
+                            <td><?= htmlspecialchars(ucfirst($location['type'])) ?></td>
+                            <td><?= htmlspecialchars(number_format($location['price_per_night'], 2)) ?></td>
+                            <td><?= htmlspecialchars($location['capacity']) ?></td>
+                            <td>
+                                <!-- Edit Location Button -->
+                                <button onclick="showEditForm(<?= $location['id'] ?>, '<?= htmlspecialchars($location['type']) ?>', <?= htmlspecialchars($location['price_per_night']) ?>, <?= htmlspecialchars($location['capacity']) ?>);" class="action-btn promote-admin-btn">Modifier</button>
+
+                                <!-- Delete Location Form -->
+                                <form method="POST" style="display:inline;">
+                                    <input type="hidden" name="location_action" value="delete_location">
+                                    <input type="hidden" name="id" value="<?= $location['id'] ?>">
+                                    <button type="submit" class="action-btn delete-btn" onclick="return confirm('Êtes-vous sûr de vouloir supprimer cet emplacement ?');">Supprimer</button>
+                                </form>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <tr>
+                        <td colspan="5">Aucun emplacement trouvé.</td>
+                    </tr>
+                <?php endif; ?>
+            </tbody>
+        </table>
+
+        <!-- Edit Location Modal -->
+        <div id="editModal" class="form-container" style="display:none;">
+            <h3>Modifier Emplacement</h3>
+            <form method="POST">
+                <input type="hidden" name="location_action" value="edit_location">
+                <input type="hidden" name="id" id="edit_id">
+
+                <label for="edit_type">Type d'Emplacement:</label>
+                <select name="type" id="edit_type" required>
+                    <option value="">--Sélectionnez--</option>
+                    <option value="tente">Tente</option>
+                    <option value="caravane">Caravane</option>
+                    <option value="chalet">Chalet</option>
+                </select>
+
+                <label for="edit_price_per_night">Prix par Nuit (€):</label>
+                <input type="number" step="0.01" name="price_per_night" id="edit_price_per_night" required>
+
+                <label for="edit_capacity">Capacité:</label>
+                <input type="number" name="capacity" id="edit_capacity" required>
+
+                <input type="submit" value="Enregistrer les Modifications">
+                <button type="button" onclick="hideEditForm();" class="action-btn deactivate-btn" style="background-color: #f44336;">Annuler</button>
+            </form>
+        </div>
     </div>
+
+    <script>
+        // Function to show the edit form with pre-filled data
+        function showEditForm(id, type, price, capacity) {
+            document.getElementById('editModal').style.display = 'block';
+            document.getElementById('edit_id').value = id;
+            document.getElementById('edit_type').value = type;
+            document.getElementById('edit_price_per_night').value = price;
+            document.getElementById('edit_capacity').value = capacity;
+        }
+
+        // Function to hide the edit form
+        function hideEditForm() {
+            document.getElementById('editModal').style.display = 'none';
+        }
+
+        // Close the modal when clicking outside of it
+        window.onclick = function(event) {
+            var modal = document.getElementById('editModal');
+            if (event.target == modal) {
+                modal.style.display = "none";
+            }
+        }
+    </script>
 </body>
 </html>

@@ -8,7 +8,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $num_people = $_POST['num_people'];
     $accommodation_type = $_POST['accommodation_type'];
     
-    $reservation_success = processReservation($_SESSION['user_id'], $arrival_date, $departure_date, $num_people, $accommodation_type);
+    //$reservation_success = processReservation($_SESSION['user_id'], $arrival_date, $departure_date, $num_people, $accommodation_type);
     
     if ($reservation_success) {
         header("Location: confirmation.php");
@@ -195,6 +195,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <a href="home.php">Accueil</a>
                 <a href="reservation.php">Réserver</a>
                 <?php if (isLoggedIn()): ?>
+                    <?php if (isset($_SESSION['role']) && ($_SESSION['role'] === 'admin' || $_SESSION['role'] === 'super_admin')): ?>
+                        <a href="admin.php">Espace Admin</a>
+                    <?php endif; ?>
                     <a href="logout.php">Déconnexion</a>
                     <span style="color:white;">Bonjour, <?= htmlspecialchars($_SESSION['username']) ?></span>
                 <?php else: ?>

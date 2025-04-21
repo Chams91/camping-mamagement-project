@@ -182,6 +182,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <a href="home.php">Accueil</a>
                 <a href="reservation.php">Réserver</a>
                 <?php if (isLoggedIn()): ?>
+                    <?php if (isset($_SESSION['role']) && ($_SESSION['role'] === 'admin' || $_SESSION['role'] === 'super_admin')): ?>
+                        <a href="admin.php">Espace Admin</a>
+                    <?php endif; ?>
                     <a href="logout.php">Déconnexion</a>
                     <span style="color:white;">Bonjour, <?= htmlspecialchars($_SESSION['username']) ?></span>
                 <?php else: ?>
