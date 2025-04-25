@@ -102,86 +102,154 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['user_action'])) {
     }
 }
 
-// Handle location management requests: add, edit, delete
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['location_action'])) {
-    $location_action = $_POST['location_action'];
-    $action_success = false;
-    $action_message = "";
+// Handle form submissions
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-    switch ($location_action) {
-        case 'add_location':
-            $type = $_POST['type'];
-            $price_per_night = floatval($_POST['price_per_night']);
-            $capacity = intval($_POST['capacity']);
-            $equipments = isset($_POST['equipments']) ? $_POST['equipments'] : [];
-            $availability_start_date = $_POST['availability_start_date'];
-            $availability_end_date = $_POST['availability_end_date'];
+    // -------------------
+    // Locations Management
+    // -------------------
+    if (isset($_POST['location_action'])) {
+        $location_action = $_POST['location_action'];
 
-            // Basic validation
-            if ($type && $price_per_night > 0 && $capacity > 0 && $availability_start_date && $availability_end_date) {
-                if (addLocation($type, $price_per_night, $capacity, $equipments, $availability_start_date, $availability_end_date)) {
-                    $action_success = true;
-                    $action_message = "Emplacement ajouté avec succès.";
+        switch ($location_action) {
+            case 'add_location':
+                $type = trim($_POST['type']);
+                $price_per_night = floatval($_POST['price_per_night']);
+                $capacity = intval($_POST['capacity']);
+                $equipments = isset($_POST['equipments']) ? $_POST['equipments'] : [];
+                $availability_start_date = $_POST['availability_start_date'];
+                $availability_end_date = $_POST['availability_end_date'];
+
+                // Basic validation
+                if ($type && $price_per_night > 0 && $capacity > 0 && $availability_start_date && $availability_end_date) {
+                    if (addLocation($type, $price_per_night, $capacity, $equipments, $availability_start_date, $availability_end_date)) {
+                        $_SESSION['success_message'] = "Emplacement ajouté avec succès.";
+                    } else {
+                        $_SESSION['error_message'] = "Échec de l'ajout de l'emplacement.";
+                    }
                 } else {
-                    $action_message = "Échec de l'ajout de l'emplacement.";
+                    $_SESSION['error_message'] = "Veuillez remplir correctement tous les champs pour ajouter un emplacement.";
                 }
-            } else {
-                $action_message = "Veuillez remplir correctement tous les champs pour ajouter un emplacement.";
-            }
-            break;
+                break;
 
-        case 'edit_location':
-            $id = intval($_POST['id']);
-            $type = $_POST['type'];
-            $price_per_night = floatval($_POST['price_per_night']);
-            $capacity = intval($_POST['capacity']);
-            $equipments = isset($_POST['equipments']) ? $_POST['equipments'] : [];
-            $availability_start_date = $_POST['availability_start_date'];
-            $availability_end_date = $_POST['availability_end_date'];
+            case 'edit_location':
+                $id = intval($_POST['id']);
+                $type = trim($_POST['type']);
+                $price_per_night = floatval($_POST['price_per_night']);
+                $capacity = intval($_POST['capacity']);
+                $equipments = isset($_POST['equipments']) ? $_POST['equipments'] : [];
+                $availability_start_date = $_POST['availability_start_date'];
+                $availability_end_date = $_POST['availability_end_date'];
 
-            // Basic validation
-            if ($id > 0 && $type && $price_per_night > 0 && $capacity > 0 && $availability_start_date && $availability_end_date) {
-                if (updateLocation($id, $type, $price_per_night, $capacity, $equipments, $availability_start_date, $availability_end_date)) {
-                    $success_message = "Emplacement mis à jour avec succès.";
+                // Basic validation
+                if ($id > 0 && $type && $price_per_night > 0 && $capacity > 0 && $availability_start_date && $availability_end_date) {
+                    if (updateLocation($id, $type, $price_per_night, $capacity, $equipments, $availability_start_date, $availability_end_date)) {
+                        $_SESSION['success_message'] = "Emplacement mis à jour avec succès.";
+                    } else {
+                        $_SESSION['error_message'] = "Échec de la mise à jour de l'emplacement.";
+                    }
                 } else {
-                    $error_message = "Échec de la mise à jour de l'emplacement.";
+                    $_SESSION['error_message'] = "Veuillez remplir correctement tous les champs pour mettre à jour l'emplacement.";
                 }
-            } else {
-                $error_message = "Veuillez remplir correctement tous les champs pour mettre à jour l'emplacement.";
-            }
-            break;
+                break;
 
-        case 'delete_location':
-            $id = intval($_POST['id']);
+            case 'delete_location':
+                $id = intval($_POST['id']);
 
-            if ($id > 0) {
-                if (deleteLocation($id)) {
-                    $success_message = "Emplacement supprimé avec succès.";
+                if ($id > 0) {
+                    if (deleteLocation($id)) {
+                        $_SESSION['success_message'] = "Emplacement supprimé avec succès.";
+                    } else {
+                        $_SESSION['error_message'] = "Échec de la suppression de l'emplacement.";
+                    }
                 } else {
-                    $error_message = "Échec de la suppression de l'emplacement.";
+                    $_SESSION['error_message'] = "ID d'emplacement invalide pour la suppression.";
                 }
-            } else {
-                $error_message = "ID d'emplacement invalide pour la suppression.";
-            }
-            break;
+                break;
 
-        default:
-            $action_message = "Action d'emplacement invalide.";
+            default:
+                $_SESSION['error_message'] = "Action d'emplacement invalide.";
+        }
+
+        // Redirect to prevent form resubmission
+        header("Location: admin.php");
+        exit();
     }
-    // Store the message in session and redirect to prevent form resubmission
-    if ($action_success) {
-        $_SESSION['success_message'] = $action_message;
-    } else {
-        $_SESSION['error_message'] = $action_message;
-    }
 
-    header("Location: admin.php"); // Redirect to the same page or another page as needed
-    exit();
+    // -------------------
+    // Hébergements Management
+    // -------------------
+    if (isset($_POST['hebergement_action'])) {
+        $hebergement_action = $_POST['hebergement_action'];
+
+        switch ($hebergement_action) {
+            case 'add_hebergement':
+                $name = trim($_POST['name']);
+                $arrival_date = $_POST['arrival_date'];
+                $departure_date = $_POST['departure_date'];
+                $price = floatval($_POST['price']);
+                $equipments = isset($_POST['equipments']) ? $_POST['equipments'] : [];
+
+                // Basic validation
+                if ($name && $arrival_date && $departure_date && $price > 0) {
+                    if (addHebergement($name, $arrival_date, $departure_date, $price, $equipments)) {
+                        $_SESSION['success_message'] = "Hébergement ajouté avec succès.";
+                    } else {
+                        $_SESSION['error_message'] = "Échec de l'ajout de l'hébergement.";
+                    }
+                } else {
+                    $_SESSION['error_message'] = "Veuillez remplir correctement tous les champs pour ajouter un hébergement.";
+                }
+                break;
+
+            case 'edit_hebergement':
+                $id = intval($_POST['id']);
+                $name = trim($_POST['name']);
+                $arrival_date = $_POST['arrival_date'];
+                $departure_date = $_POST['departure_date'];
+                $price = floatval($_POST['price']);
+                $equipments = isset($_POST['equipments']) ? $_POST['equipments'] : [];
+
+                // Basic validation
+                if ($id > 0 && $name && $arrival_date && $departure_date && $price > 0) {
+                    if (updateHebergement($id, $name, $arrival_date, $departure_date, $price, $equipments)) {
+                        $_SESSION['success_message'] = "Hébergement mis à jour avec succès.";
+                    } else {
+                        $_SESSION['error_message'] = "Échec de la mise à jour de l'hébergement.";
+                    }
+                } else {
+                    $_SESSION['error_message'] = "Veuillez remplir correctement tous les champs pour mettre à jour l'hébergement.";
+                }
+                break;
+
+            case 'delete_hebergement':
+                $id = intval($_POST['id']);
+
+                if ($id > 0) {
+                    if (deleteHebergement($id)) {
+                        $_SESSION['success_message'] = "Hébergement supprimé avec succès.";
+                    } else {
+                        $_SESSION['error_message'] = "Échec de la suppression de l'hébergement.";
+                    }
+                } else {
+                    $_SESSION['error_message'] = "ID d'hébergement invalide pour la suppression.";
+                }
+                break;
+
+            default:
+                $_SESSION['error_message'] = "Action d'hébergement invalide.";
+        }
+
+        // Redirect to prevent form resubmission
+        header("Location: admin.php");
+        exit();
+    }
 }
 
-// Fetch all users and locations
+// Fetch all users, locations, and hébergements
 $users = getAllUsers();
 $locations = getAllLocations();
+$hebergements = getAllHebergements();
 
 // Retrieve and clear messages from session
 $success_message = isset($_SESSION['success_message']) ? $_SESSION['success_message'] : '';
@@ -489,9 +557,9 @@ unset($_SESSION['success_message'], $_SESSION['error_message']);
     </style>
     <script>
         // Function to show the edit location form with pre-filled data
-        function showEditForm(location) {
-            document.getElementById('editModal').style.display = 'block';
-            document.getElementById('edit_id').value = location.id;
+        function showEditLocationForm(location) {
+            document.getElementById('editLocationModal').style.display = 'block';
+            document.getElementById('edit_location_id').value = location.id;
             document.getElementById('edit_type').value = location.type;
             document.getElementById('edit_price_per_night').value = location.price_per_night;
             document.getElementById('edit_capacity').value = location.capacity;
@@ -521,15 +589,50 @@ unset($_SESSION['success_message'], $_SESSION['error_message']);
         }
 
         // Function to hide the edit location form
-        function hideEditForm() {
-            document.getElementById('editModal').style.display = 'none';
+        function hideEditLocationForm() {
+            document.getElementById('editLocationModal').style.display = 'none';
         }
 
-        // Close the modal when clicking outside of it
+        // Function to show the edit hébergement form with pre-filled data
+        function showEditHebergementForm(hebergement) {
+            document.getElementById('editHebergementModal').style.display = 'block';
+            document.getElementById('edit_hebergement_id').value = hebergement.id;
+            document.getElementById('edit_hebergement_name').value = hebergement.name;
+            document.getElementById('edit_hebergement_arrival_date').value = hebergement.arrival_date;
+            document.getElementById('edit_hebergement_departure_date').value = hebergement.departure_date;
+            document.getElementById('edit_hebergement_price').value = hebergement.price;
+
+            // Reset all equipment checkboxes
+            document.getElementById('edit_hebergement_equip_wifi').checked = false;
+            document.getElementById('edit_hebergement_equip_climatisation').checked = false;
+
+            // Split the equipments string into an array
+            var equipments = hebergement.equipments.split(',');
+
+            equipments.forEach(function(item) {
+                if (item.trim() === 'wifi') {
+                    document.getElementById('edit_hebergement_equip_wifi').checked = true;
+                }
+                if (item.trim() === 'climatisation') {
+                    document.getElementById('edit_hebergement_equip_climatisation').checked = true;
+                }
+            });
+        }
+
+        // Function to hide the edit hébergement form
+        function hideEditHebergementForm() {
+            document.getElementById('editHebergementModal').style.display = 'none';
+        }
+
+        // Close the modals when clicking outside of them
         window.onclick = function(event) {
-            var modal = document.getElementById('editModal');
-            if (event.target == modal) {
-                modal.style.display = "none";
+            var editLocationModal = document.getElementById('editLocationModal');
+            var editHebergementModal = document.getElementById('editHebergementModal');
+            if (event.target == editLocationModal) {
+                editLocationModal.style.display = "none";
+            }
+            if (event.target == editHebergementModal) {
+                editHebergementModal.style.display = "none";
             }
         }
     </script>
@@ -582,61 +685,66 @@ unset($_SESSION['success_message'], $_SESSION['error_message']);
                             <td><?= htmlspecialchars($user['role']) ?></td>
                             <td><?= $user['is_active'] ? 'Actif' : 'Désactivé' ?></td>
                             <td>
-                                <!-- Activate/Deactivate Buttons -->
-                                <form method="POST" style="display:inline;">
-                                    <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
-                                    <input type="hidden" name="user_action" value="<?= $user['is_active'] ? 'deactivate' : 'activate' ?>">
-                                    <button type="submit" class="action-btn <?= $user['is_active'] ? 'deactivate-btn' : 'activate-btn' ?>" onclick="return confirm('Êtes-vous sûr de vouloir <?= $user['is_active'] ? 'désactiver' : 'activer' ?> cet utilisateur ?');">
-                                        <?= $user['is_active'] ? 'Désactiver' : 'Activer' ?>
-                                    </button>
-                                </form>
+                                <div class="action-buttons">
+                                    <!-- Activate/Deactivate Buttons -->
+                                    <form method="POST">
+                                        <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
+                                        <?php if ($user['is_active']): ?>
+                                            <input type="hidden" name="user_action" value="deactivate">
+                                            <button type="submit" class="demote-admin-btn" onclick="return confirm('Êtes-vous sûr de vouloir désactiver cet utilisateur ?');">Désactiver</button>
+                                        <?php else: ?>
+                                            <input type="hidden" name="user_action" value="activate">
+                                            <button type="submit" class="promote-admin-btn" onclick="return confirm('Êtes-vous sûr de vouloir activer cet utilisateur ?');">Activer</button>
+                                        <?php endif; ?>
+                                    </form>
 
-                                <!-- Role Management Buttons (Visible to Super Admins Only) -->
-                                <?php if ($_SESSION['role'] === 'super_admin'): ?>
-                                    <?php if ($user['role'] === 'user'): ?>
-                                        <!-- Promote to Admin -->
-                                        <form method="POST" style="display:inline;">
-                                            <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
-                                            <input type="hidden" name="user_action" value="promote_admin">
-                                            <button type="submit" class="action-btn promote-admin-btn" onclick="return confirm('Êtes-vous sûr de vouloir promouvoir cet utilisateur en admin ?');">Promouvoir en Admin</button>
-                                        </form>
+                                    <!-- Role Management Buttons (Visible to Super Admins Only) -->
+                                    <?php if ($_SESSION['role'] === 'super_admin'): ?>
+                                        <?php if ($user['role'] === 'user'): ?>
+                                            <!-- Promote to Admin -->
+                                            <form method="POST">
+                                                <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
+                                                <input type="hidden" name="user_action" value="promote_admin">
+                                                <button type="submit" class="promote-admin-btn" onclick="return confirm('Êtes-vous sûr de vouloir promouvoir cet utilisateur en admin ?');">Promouvoir en Admin</button>
+                                            </form>
 
-                                        <!-- Promote to Super Admin -->
-                                        <form method="POST" style="display:inline;">
-                                            <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
-                                            <input type="hidden" name="user_action" value="promote_super_admin">
-                                            <button type="submit" class="action-btn promote-superadmin-btn" onclick="return confirm('Êtes-vous sûr de vouloir promouvoir cet utilisateur en super admin ?');">Promouvoir en Super Admin</button>
-                                        </form>
-                                    <?php elseif ($user['role'] === 'admin'): ?>
-                                        <!-- Demote to User -->
-                                        <form method="POST" style="display:inline;">
-                                            <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
-                                            <input type="hidden" name="user_action" value="demote_admin">
-                                            <button type="submit" class="action-btn demote-admin-btn" onclick="return confirm('Êtes-vous sûr de vouloir rétrograder cet admin en utilisateur ?');">Rétrograder en Utilisateur</button>
-                                        </form>
+                                            <!-- Promote to Super Admin -->
+                                            <form method="POST">
+                                                <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
+                                                <input type="hidden" name="user_action" value="promote_super_admin">
+                                                <button type="submit" class="promote-superadmin-btn" onclick="return confirm('Êtes-vous sûr de vouloir promouvoir cet utilisateur en super admin ?');">Promouvoir en Super Admin</button>
+                                            </form>
+                                        <?php elseif ($user['role'] === 'admin'): ?>
+                                            <!-- Demote to User -->
+                                            <form method="POST">
+                                                <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
+                                                <input type="hidden" name="user_action" value="demote_admin">
+                                                <button type="submit" class="demote-admin-btn" onclick="return confirm('Êtes-vous sûr de vouloir rétrograder cet admin en utilisateur ?');">Rétrograder en Utilisateur</button>
+                                            </form>
 
-                                        <!-- Promote to Super Admin -->
-                                        <form method="POST" style="display:inline;">
-                                            <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
-                                            <input type="hidden" name="user_action" value="promote_super_admin">
-                                            <button type="submit" class="action-btn promote-superadmin-btn" onclick="return confirm('Êtes-vous sûr de vouloir promouvoir cet admin en super admin ?');">Promouvoir en Super Admin</button>
-                                        </form>
-                                    <?php elseif ($user['role'] === 'super_admin'): ?>
-                                        <!-- Optionally, allow demoting super_admin to admin -->
-                                        <form method="POST" style="display:inline;">
-                                            <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
-                                            <input type="hidden" name="user_action" value="demote_admin">
-                                            <button type="submit" class="action-btn demote-admin-btn" onclick="return confirm('Êtes-vous sûr de vouloir rétrograder ce super admin en admin ?');">Rétrograder en Admin</button>
-                                        </form>
+                                            <!-- Promote to Super Admin -->
+                                            <form method="POST">
+                                                <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
+                                                <input type="hidden" name="user_action" value="promote_super_admin">
+                                                <button type="submit" class="promote-superadmin-btn" onclick="return confirm('Êtes-vous sûr de vouloir promouvoir cet admin en super admin ?');">Promouvoir en Super Admin</button>
+                                            </form>
+                                        <?php elseif ($user['role'] === 'super_admin'): ?>
+                                            <!-- Optionally, allow demoting super_admin to admin -->
+                                            <form method="POST">
+                                                <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
+                                                <input type="hidden" name="user_action" value="demote_admin">
+                                                <button type="submit" class="demote-admin-btn" onclick="return confirm('Êtes-vous sûr de vouloir rétrograder ce super admin en admin ?');">Rétrograder en Admin</button>
+                                            </form>
+                                        <?php endif; ?>
                                     <?php endif; ?>
-                                <?php endif; ?>
 
-                                <!-- Delete Button -->
-                                <form method="POST" style="display:inline;">
-                                    <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
-                                    <input type="hidden" name="user_action" value="delete">
-                                    <button type="submit" class="action-btn delete-btn" onclick="return confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ? Cette action est irréversible.');">Supprimer</button>
-                                </form>
+                                    <!-- Delete Button -->
+                                    <form method="POST">
+                                        <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
+                                        <input type="hidden" name="user_action" value="delete">
+                                        <button type="submit" class="delete-btn" onclick="return confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ? Cette action est irréversible.');">Supprimer</button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                     <?php endforeach; ?>
@@ -648,7 +756,9 @@ unset($_SESSION['success_message'], $_SESSION['error_message']);
             </tbody>
         </table>
 
-        <!-- Locations Management Section -->
+        <!-- -----------------------
+             Locations Management
+             ------------------------ -->
         <h2>Gestion des Emplacements</h2>
 
         <!-- Add New Location Form -->
@@ -721,15 +831,17 @@ unset($_SESSION['success_message'], $_SESSION['error_message']);
                             </td>
                             <td><?= htmlspecialchars($location['availability_start_date']) ?> au <?= htmlspecialchars($location['availability_end_date']) ?></td>
                             <td>
-                                <!-- Edit Location Button -->
-                                <button onclick='showEditForm(<?= json_encode($location) ?>)' class="action-btn promote-admin-btn">Modifier</button>
+                                <div class="action-buttons">
+                                    <!-- Edit Location Button -->
+                                    <button onclick='showEditLocationForm(<?= json_encode($location) ?>)' class="promote-admin-btn">Modifier</button>
 
-                                <!-- Delete Location Form -->
-                                <form method="POST" style="display:inline;">
-                                    <input type="hidden" name="location_action" value="delete_location">
-                                    <input type="hidden" name="id" value="<?= $location['id'] ?>">
-                                    <button type="submit" class="action-btn delete-btn" onclick="return confirm('Êtes-vous sûr de vouloir supprimer cet emplacement ?');">Supprimer</button>
-                                </form>
+                                    <!-- Delete Location Form -->
+                                    <form method="POST">
+                                        <input type="hidden" name="location_action" value="delete_location">
+                                        <input type="hidden" name="id" value="<?= $location['id'] ?>">
+                                        <button type="submit" class="delete-btn" onclick="return confirm('Êtes-vous sûr de vouloir supprimer cet emplacement ?');">Supprimer</button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                     <?php endforeach; ?>
@@ -742,13 +854,13 @@ unset($_SESSION['success_message'], $_SESSION['error_message']);
         </table>
 
         <!-- Edit Location Modal -->
-        <div id="editModal" class="modal">
+        <div id="editLocationModal" class="modal">
             <div class="modal-content">
-                <span class="close" onclick="hideEditForm()">&times;</span>
+                <span class="close" onclick="hideEditLocationForm()">&times;</span>
                 <h3>Modifier Emplacement</h3>
                 <form method="POST">
                     <input type="hidden" name="location_action" value="edit_location">
-                    <input type="hidden" name="id" id="edit_id">
+                    <input type="hidden" name="id" id="edit_location_id">
 
                     <label for="edit_type">Type d'Emplacement:</label>
                     <select name="type" id="edit_type" required>
@@ -779,53 +891,124 @@ unset($_SESSION['success_message'], $_SESSION['error_message']);
                 </form>
             </div>
         </div>
+
+        <!-- -----------------------
+             Hébergements Management
+             ------------------------ -->
+        <h2>Gestion des Hébergements</h2>
+
+        <!-- Add New Hébergement Form -->
+        <div class="form-container">
+            <h3>Ajouter un Nouvel Hébergement</h3>
+            <form method="POST">
+                <input type="hidden" name="hebergement_action" value="add_hebergement">
+                
+                <label for="name">Nom de l'Hébergement:</label>
+                <input type="text" name="name" id="name" required>
+                
+                <label for="arrival_date">Date d'Arrivée:</label>
+                <input type="date" name="arrival_date" id="arrival_date" required>
+                
+                <label for="departure_date">Date de Départ:</label>
+                <input type="date" name="departure_date" id="departure_date" required>
+                
+                <label for="price">Prix (€):</label>
+                <input type="number" step="0.01" name="price" id="price" required>
+                
+                <label>Équipements Disponibles:</label>
+                <input type="checkbox" name="equipments[]" value="wifi" id="equip_hebergement_wifi"> <label for="equip_hebergement_wifi">Wifi</label><br>
+                <input type="checkbox" name="equipments[]" value="climatisation" id="equip_hebergement_climatisation"> <label for="equip_hebergement_climatisation">Climatisation</label><br><br>
+                
+                <input type="submit" value="Ajouter Hébergement">
+            </form>
+        </div>
+
+        <!-- Hébergements Table -->
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nom</th>
+                    <th>Date d'Arrivée</th>
+                    <th>Date de Départ</th>
+                    <th>Prix (€)</th>
+                    <th>Équipements</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if ($hebergements): ?>
+                    <?php foreach ($hebergements as $hebergement): ?>
+                        <tr>
+                            <td><?= htmlspecialchars($hebergement['id']) ?></td>
+                            <td><?= htmlspecialchars($hebergement['name']) ?></td>
+                            <td><?= htmlspecialchars($hebergement['arrival_date']) ?></td>
+                            <td><?= htmlspecialchars($hebergement['departure_date']) ?></td>
+                            <td><?= htmlspecialchars(number_format($hebergement['price'], 2)) ?></td>
+                            <td>
+                                <?php
+                                    // Convert equipments string to display-friendly format
+                                    $equipments_display = '';
+                                    if (!empty($hebergement['equipments'])) {
+                                        $equipments_array = explode(',', $hebergement['equipments']);
+                                        $formatted_equipments = array_map('ucfirst', $equipments_array);
+                                        $equipments_display = htmlspecialchars(implode(', ', $formatted_equipments));
+                                    }
+                                    echo $equipments_display ?: 'Aucun';
+                                ?>
+                            </td>
+                            <td>
+                                <div class="action-buttons">
+                                    <!-- Edit Hébergement Button -->
+                                    <button onclick='showEditHebergementForm(<?= json_encode($hebergement) ?>)' class="promote-admin-btn">Modifier</button>
+
+                                    <!-- Delete Hébergement Form -->
+                                    <form method="POST">
+                                        <input type="hidden" name="hebergement_action" value="delete_hebergement">
+                                        <input type="hidden" name="id" value="<?= $hebergement['id'] ?>">
+                                        <button type="submit" class="delete-btn" onclick="return confirm('Êtes-vous sûr de vouloir supprimer cet hébergement ?');">Supprimer</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <tr>
+                        <td colspan="7">Aucun hébergement trouvé.</td>
+                    </tr>
+                <?php endif; ?>
+            </tbody>
+        </table>
+
+        <!-- Edit Hébergement Modal -->
+        <div id="editHebergementModal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="hideEditHebergementForm()">&times;</span>
+                <h3>Modifier Hébergement</h3>
+                <form method="POST">
+                    <input type="hidden" name="hebergement_action" value="edit_hebergement">
+                    <input type="hidden" name="id" id="edit_hebergement_id">
+
+                    <label for="edit_hebergement_name">Nom de l'Hébergement:</label>
+                    <input type="text" name="name" id="edit_hebergement_name" required>
+
+                    <label for="edit_hebergement_arrival_date">Date d'Arrivée:</label>
+                    <input type="date" name="arrival_date" id="edit_hebergement_arrival_date" required>
+
+                    <label for="edit_hebergement_departure_date">Date de Départ:</label>
+                    <input type="date" name="departure_date" id="edit_hebergement_departure_date" required>
+
+                    <label for="edit_hebergement_price">Prix (€):</label>
+                    <input type="number" step="0.01" name="price" id="edit_hebergement_price" required>
+
+                    <label>Équipements Disponibles:</label>
+                    <input type="checkbox" name="equipments[]" value="wifi" id="edit_hebergement_equip_wifi"> <label for="edit_hebergement_equip_wifi">Wifi</label><br>
+                    <input type="checkbox" name="equipments[]" value="climatisation" id="edit_hebergement_equip_climatisation"> <label for="edit_hebergement_equip_climatisation">Climatisation</label><br><br>
+
+                    <input type="submit" value="Enregistrer les Modifications">
+                </form>
+            </div>
+        </div>
     </div>
-
-    <script>
-        // JavaScript function to populate and display the edit modal with location data
-        function showEditForm(location) {
-            document.getElementById('editModal').style.display = 'block';
-            document.getElementById('edit_id').value = location.id;
-            document.getElementById('edit_type').value = location.type;
-            document.getElementById('edit_price_per_night').value = location.price_per_night;
-            document.getElementById('edit_capacity').value = location.capacity;
-
-            // Reset all equipment checkboxes
-            document.getElementById('edit_equipment_water').checked = false;
-            document.getElementById('edit_equipment_electricity').checked = false;
-            document.getElementById('edit_equipment_heating').checked = false;
-
-            // Split the equipments string into an array
-            var equipments = location.equipments.split(',');
-
-            equipments.forEach(function(item) {
-                if (item.trim() === 'water') {
-                    document.getElementById('edit_equipment_water').checked = true;
-                }
-                if (item.trim() === 'electricity') {
-                    document.getElementById('edit_equipment_electricity').checked = true;
-                }
-                if (item.trim() === 'heating') {
-                    document.getElementById('edit_equipment_heating').checked = true;
-                }
-            });
-
-            document.getElementById('edit_availability_start_date').value = location.availability_start_date;
-            document.getElementById('edit_availability_end_date').value = location.availability_end_date;
-        }
-
-        // JavaScript function to hide the edit modal
-        function hideEditForm() {
-            document.getElementById('editModal').style.display = 'none';
-        }
-
-        // Close the modal when clicking outside of it
-        window.onclick = function(event) {
-            var modal = document.getElementById('editModal');
-            if (event.target == modal) {
-                modal.style.display = "none";
-            }
-        }
-    </script>
 </body>
 </html>

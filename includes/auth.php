@@ -330,4 +330,108 @@ function deleteLocation($id) {
     }
 }
 
+/**
+ * Add a new hébergement to the database.
+ *
+ * @param string $name Name of the hébergement.
+ * @param string $arrival_date Arrival date.
+ * @param string $departure_date Departure date.
+ * @param float $price Price of the hébergement.
+ * @param array $equipments Array of available equipment.
+ * @return bool Returns true on success, false on failure.
+ */
+function addHebergement($name, $arrival_date, $departure_date, $price, $equipments) {
+    global $pdo;
+    try {
+        // Convert the equipments array to a comma-separated string
+        $equipments_str = implode(',', $equipments);
+        
+        $stmt = $pdo->prepare("INSERT INTO hebergements 
+            (name, arrival_date, departure_date, price, equipments) 
+            VALUES (?, ?, ?, ?, ?)");
+        return $stmt->execute([
+            $name, 
+            $arrival_date, 
+            $departure_date, 
+            $price, 
+            $equipments_str
+        ]);
+    } catch (PDOException $e) {
+        error_log("Failed to add hébergement: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Update an existing hébergement in the database.
+ *
+ * @param int $id ID of the hébergement to update.
+ * @param string $name New name of the hébergement.
+ * @param string $arrival_date New arrival date.
+ * @param string $departure_date New departure date.
+ * @param float $price New price.
+ * @param array $equipments Array of available equipment.
+ * @return bool Returns true on success, false on failure.
+ */
+function updateHebergement($id, $name, $arrival_date, $departure_date, $price, $equipments) {
+    global $pdo;
+    try {
+        // Convert the equipments array to a comma-separated string
+        $equipments_str = implode(',', $equipments);
+        
+        $stmt = $pdo->prepare("UPDATE hebergements SET 
+            name = ?, 
+            arrival_date = ?, 
+            departure_date = ?, 
+            price = ?, 
+            equipments = ?
+            WHERE id = ?");
+        return $stmt->execute([
+            $name, 
+            $arrival_date, 
+            $departure_date, 
+            $price, 
+            $equipments_str,
+            $id
+        ]);
+    } catch (PDOException $e) {
+        error_log("Failed to update hébergement: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Delete a hébergement from the database.
+ *
+ * @param int $id ID of the hébergement to delete.
+ * @return bool Returns true on success, false on failure.
+ */
+function deleteHebergement($id) {
+    global $pdo;
+    try {
+        $stmt = $pdo->prepare("DELETE FROM hebergements WHERE id = ?");
+        return $stmt->execute([$id]);
+    } catch (PDOException $e) {
+        error_log("Failed to delete hébergement: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Fetch all hébergements from the database.
+ *
+ * @return array|false Returns an array of hébergements or false on failure.
+ */
+function getAllHebergements() {
+    global $pdo;
+    try {
+        $stmt = $pdo->prepare("SELECT * FROM hebergements ORDER BY id ASC");
+        $stmt->execute();
+        return $stmt->fetchAll();
+    } catch (PDOException $e) {
+        error_log("Failed to fetch hébergements: " . $e->getMessage());
+        return false;
+    }
+}
+
 ?>

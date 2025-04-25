@@ -40,3 +40,15 @@ CREATE TABLE locations (
 
 INSERT INTO locations (type, price_per_night, capacity) 
 VALUES ('tente', 50.00, 4);
+
+
+CREATE TABLE hebergements (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    arrival_date DATE NOT NULL,
+    departure_date DATE NOT NULL,
+    price DECIMAL(10,2) NOT NULL,
+    equipments VARCHAR(255), -- Comma-separated list of equipments
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
