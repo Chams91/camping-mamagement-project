@@ -244,13 +244,28 @@ function getAllLocations() {
  * @param string $type Type of accommodation ('tente', 'caravane', 'chalet').
  * @param float $price_per_night Price per night.
  * @param int $capacity Capacity of the location.
+ * @param array $equipments Array of available equipment.
+ * @param string $availability_start_date Start date of availability.
+ * @param string $availability_end_date End date of availability.
  * @return bool Returns true on success, false on failure.
  */
-function addLocation($type, $price_per_night, $capacity) {
+function addLocation($type, $price_per_night, $capacity, $equipments, $availability_start_date, $availability_end_date) {
     global $pdo;
     try {
-        $stmt = $pdo->prepare("INSERT INTO locations (type, price_per_night, capacity) VALUES (?, ?, ?)");
-        return $stmt->execute([$type, $price_per_night, $capacity]);
+        // Convert the equipments array to a comma-separated string
+        $equipments_str = implode(',', $equipments);
+        
+        $stmt = $pdo->prepare("INSERT INTO locations 
+            (type, price_per_night, capacity, equipments, availability_start_date, availability_end_date) 
+            VALUES (?, ?, ?, ?, ?, ?)");
+        return $stmt->execute([
+            $type, 
+            $price_per_night, 
+            $capacity, 
+            $equipments_str, 
+            $availability_start_date, 
+            $availability_end_date
+        ]);
     } catch (PDOException $e) {
         error_log("Failed to add location: " . $e->getMessage());
         return false;
@@ -264,13 +279,34 @@ function addLocation($type, $price_per_night, $capacity) {
  * @param string $type New type of accommodation.
  * @param float $price_per_night New price per night.
  * @param int $capacity New capacity.
+ * @param array $equipments Array of available equipment.
+ * @param string $availability_start_date New start date of availability.
+ * @param string $availability_end_date New end date of availability.
  * @return bool Returns true on success, false on failure.
  */
-function updateLocation($id, $type, $price_per_night, $capacity) {
+function updateLocation($id, $type, $price_per_night, $capacity, $equipments, $availability_start_date, $availability_end_date) {
     global $pdo;
     try {
-        $stmt = $pdo->prepare("UPDATE locations SET type = ?, price_per_night = ?, capacity = ? WHERE id = ?");
-        return $stmt->execute([$type, $price_per_night, $capacity, $id]);
+        // Convert the equipments array to a comma-separated string
+        $equipments_str = implode(',', $equipments);
+        
+        $stmt = $pdo->prepare("UPDATE locations SET 
+            type = ?, 
+            price_per_night = ?, 
+            capacity = ?, 
+            equipments = ?, 
+            availability_start_date = ?, 
+            availability_end_date = ?
+            WHERE id = ?");
+        return $stmt->execute([
+            $type, 
+            $price_per_night, 
+            $capacity, 
+            $equipments_str, 
+            $availability_start_date, 
+            $availability_end_date,
+            $id
+        ]);
     } catch (PDOException $e) {
         error_log("Failed to update location: " . $e->getMessage());
         return false;
