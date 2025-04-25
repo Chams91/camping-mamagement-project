@@ -105,6 +105,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['user_action'])) {
 // Handle location management requests: add, edit, delete
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['location_action'])) {
     $location_action = $_POST['location_action'];
+    $action_success = false;
+    $action_message = "";
 
     switch ($location_action) {
         case 'add_location':
@@ -118,12 +120,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['location_action'])) {
             // Basic validation
             if ($type && $price_per_night > 0 && $capacity > 0 && $availability_start_date && $availability_end_date) {
                 if (addLocation($type, $price_per_night, $capacity, $equipments, $availability_start_date, $availability_end_date)) {
-                    $success_message = "Emplacement ajouté avec succès.";
+                    $action_success = true;
+                    $action_message = "Emplacement ajouté avec succès.";
                 } else {
-                    $error_message = "Échec de l'ajout de l'emplacement.";
+                    $action_message = "Échec de l'ajout de l'emplacement.";
                 }
             } else {
-                $error_message = "Veuillez remplir correctement tous les champs pour ajouter un emplacement.";
+                $action_message = "Veuillez remplir correctement tous les champs pour ajouter un emplacement.";
             }
             break;
 
@@ -163,13 +166,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['location_action'])) {
             break;
 
         default:
-            $error_message = "Action d'emplacement invalide.";
+            $action_message = "Action d'emplacement invalide.";
     }
+    // Store the message in session and redirect to prevent form resubmission
+    if ($action_success) {
+        $_SESSION['success_message'] = $action_message;
+    } else {
+        $_SESSION['error_message'] = $action_message;
+    }
+
+    header("Location: admin.php"); // Redirect to the same page or another page as needed
+    exit();
 }
 
 // Fetch all users and locations
 $users = getAllUsers();
 $locations = getAllLocations();
+
+// Retrieve and clear messages from session
+$success_message = isset($_SESSION['success_message']) ? $_SESSION['success_message'] : '';
+$error_message = isset($_SESSION['error_message']) ? $_SESSION['error_message'] : '';
+unset($_SESSION['success_message'], $_SESSION['error_message']);
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -523,12 +540,7 @@ $locations = getAllLocations();
             <div class="logo">Camping Nature - Admin Panel</div>
             <div class="nav-links">
                 <a href="home.php">Accueil</a>
-                <a href="reservation.php">Réserver</a>
-                
-                <?php if ($_SESSION['role'] === 'super_admin'): ?>
-                    <a href="superadmin.php" style="background-color: #f44336; padding: 5px 10px; border-radius: 4px;">⚡ Super Admin</a>
-                <?php endif; ?>
-                
+                <a href="reservation.php">Réserver</a>    
                 <a href="logout.php">Déconnexion</a>
                 <span style="color:white;">Bonjour, <?= htmlspecialchars($_SESSION['username']) ?></span>
             </div>
