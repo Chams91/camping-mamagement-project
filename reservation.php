@@ -1,16 +1,14 @@
 <?php
 require 'includes/auth.php';
-redirectIfNotLoggedIn(); // Only logged-in users can make reservations
+redirectIfNotLoggedIn();
 
-// Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $arrival_date = $_POST['arrival_date'];
     $departure_date = $_POST['departure_date'];
     $num_people = $_POST['num_people'];
     $accommodation_type = $_POST['accommodation_type'];
     
-    // Process reservation (you'll need to implement this)
-    $reservation_success = processReservation($_SESSION['user_id'], $arrival_date, $departure_date, $num_people, $accommodation_type);
+    //$reservation_success = processReservation($_SESSION['user_id'], $arrival_date, $departure_date, $num_people, $accommodation_type);
     
     if ($reservation_success) {
         header("Location: confirmation.php");
@@ -28,19 +26,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Réserver votre séjour</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #f8f9fa;
+        * {
             margin: 0;
-            padding: 20px;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+        
+        body {
+            background-color: #f8f9fa;
+            color: #495057;
+        }
+        
+        header {
+            background-color: #2a593d;
+            padding: 20px 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        nav {
+            max-width: 1200px;
+            margin: 0 auto;
             display: flex;
-            justify-content: center;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+        }
+        
+        .logo {
+            color: white;
+            font-weight: bold;
+            font-size: 24px;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 30px;
+        }
+        
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            font-size: 16px;
+            transition: color 0.3s;
+        }
+        
+        .nav-links a:hover {
+            color: #c8e6c9;
         }
 
-        header {
-            position: sticky;
-            top: 0;
-            z-index: 100;
+        /* Your existing reservation styles */
+        .main-content {
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+            min-height: calc(100vh - 70px);
         }
 
         .container {
@@ -50,6 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
             max-width: 700px;
             width: 100%;
+            margin: 20px 0;
         }
 
         h1 {
@@ -153,7 +194,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="nav-links">
                 <a href="home.php">Accueil</a>
                 <a href="reservation.php">Réserver</a>
-                <?php if ($logged_in): ?>
+                <?php if (isLoggedIn()): ?>
+                    <?php if (isset($_SESSION['role']) && ($_SESSION['role'] === 'admin' || $_SESSION['role'] === 'super_admin')): ?>
+                        <a href="admin.php">Espace Admin</a>
+                    <?php endif; ?>
                     <a href="logout.php">Déconnexion</a>
                     <span style="color:white;">Bonjour, <?= htmlspecialchars($_SESSION['username']) ?></span>
                 <?php else: ?>
@@ -163,57 +207,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
         </nav>
     </header>
-    <div class="container">
-        <h1>Réserver votre séjour</h1>
-        <p class="subtitle">Choisissez vos dates et votre type d'hébergement</p>
 
-        <?php if (isset($error)): ?>
-            <div class="error-message"><?= htmlspecialchars($error) ?></div>
-        <?php endif; ?>
+    <div class="main-content">
+        <div class="container">
+            <h1>Réserver votre séjour</h1>
+            <p class="subtitle">Choisissez vos dates et votre type d'hébergement</p>
 
-        <form method="post" class="reservation-box">
-            <div class="section">
-                <h2>📅 Dates de séjour</h2>
-                <label for="arrival_date">Date d'arrivée</label>
-                <input type="date" id="arrival_date" name="arrival_date" required min="<?= date('Y-m-d') ?>">
+            <?php if (isset($error)): ?>
+                <div class="error-message"><?= htmlspecialchars($error) ?></div>
+            <?php endif; ?>
 
-                <label for="departure_date">Date de départ</label>
-                <input type="date" id="departure_date" name="departure_date" required>
-            </div>
+            <form method="post" class="reservation-box">
+                <div class="section">
+                    <h2>📅 Dates de séjour</h2>
+                    <label for="arrival_date">Date d'arrivée</label>
+                    <input type="date" id="arrival_date" name="arrival_date" required min="<?= date('Y-m-d') ?>">
 
-            <div class="section">
-                <h2>🧑‍🤝‍🧑 Voyageurs</h2>
-                <label for="num_people">Nombre de personnes</label>
-                <select id="num_people" name="num_people" required>
-                    <option value="1">1 personne</option>
-                    <option value="2">2 personnes</option>
-                    <option value="3">3 personnes</option>
-                    <option value="4">4 personnes</option>
-                    <option value="5">5 personnes</option>
-                    <option value="6">6 personnes</option>
-                </select>
-            </div>
-
-            <div class="section">
-                <h2>🏕️ Type d'hébergement</h2>
-                <div class="logement">
-                    <input type="radio" id="tent" name="accommodation_type" value="tent" checked>
-                    <label for="tent">Tente<br><small>À partir de 30DT/nuit</small></label>
-
-                    <input type="radio" id="caravan" name="accommodation_type" value="caravan">
-                    <label for="caravan">Emplacement Caravane<br><small>À partir de 40DT/nuit</small></label>
-
-                    <input type="radio" id="mobile_home" name="accommodation_type" value="mobile_home">
-                    <label for="mobile_home">Mobil-home<br><small>À partir de 100DT/nuit</small></label>
+                    <label for="departure_date">Date de départ</label>
+                    <input type="date" id="departure_date" name="departure_date" required>
                 </div>
-            </div>
 
-            <button type="submit" class="btn">Vérifier la disponibilité</button>
-        </form>
+                <div class="section">
+                    <h2>🧑‍🤝‍🧑 Voyageurs</h2>
+                    <label for="num_people">Nombre de personnes</label>
+                    <select id="num_people" name="num_people" required>
+                        <option value="1">1 personne</option>
+                        <option value="2">2 personnes</option>
+                        <option value="3">3 personnes</option>
+                        <option value="4">4 personnes</option>
+                        <option value="5">5 personnes</option>
+                        <option value="6">6 personnes</option>
+                    </select>
+                </div>
+
+                <div class="section">
+                    <h2>🏕️ Type d'hébergement</h2>
+                    <div class="logement">
+                        <input type="radio" id="tent" name="accommodation_type" value="tent" checked>
+                        <label for="tent">Tente<br><small>À partir de 30DT/nuit</small></label>
+
+                        <input type="radio" id="caravan" name="accommodation_type" value="caravan">
+                        <label for="caravan">Emplacement Caravane<br><small>À partir de 40DT/nuit</small></label>
+
+                        <input type="radio" id="mobile_home" name="accommodation_type" value="mobile_home">
+                        <label for="mobile_home">Mobil-home<br><small>À partir de 100DT/nuit</small></label>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn">Vérifier la disponibilité</button>
+            </form>
+        </div>
     </div>
 
     <script>
-        // Set minimum departure date based on arrival date
         document.getElementById('arrival_date').addEventListener('change', function() {
             const arrivalDate = new Date(this.value);
             const nextDay = new Date(arrivalDate);

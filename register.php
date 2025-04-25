@@ -12,10 +12,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $lastname = trim($_POST['lastname']);
     $email = trim($_POST['email']);
     $password = $_POST['password'];
-    $username = strtolower($firstname . '.' . $lastname); // Generate username
+    $username = strtolower($firstname . '.' . $lastname);
 
     if (registerUser($username, $email, $password)) {
-        // Auto-login after registration
         if (loginUser($username, $password)) {
             header("Location: home.php?registered=1");
             exit();
@@ -43,10 +42,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         body {
             background-color: #f5f5f5;
             color: #333;
+        }
+        
+        header {
+            background-color: #2a593d;
+            padding: 20px 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        nav {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+        }
+        
+        .logo {
+            color: white;
+            font-weight: bold;
+            font-size: 24px;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 30px;
+        }
+        
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            font-size: 16px;
+            transition: color 0.3s;
+        }
+        
+        .nav-links a:hover {
+            color: #c8e6c9;
+        }
+
+        /* Registration form styles */
+        .main-content {
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
+            min-height: calc(100vh - 70px);
             padding: 20px;
         }
         
@@ -135,41 +175,63 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Créer un compte</h1>
-        <p class="login-link">Ou <a href="login.php">connectez-vous à votre compte</a></p>
-        
-        <?php if ($error): ?>
-            <div class="error-message"><?= htmlspecialchars($error) ?></div>
-        <?php endif; ?>
-        
-        <hr>
-        
-        <form method="post">
-            <div class="form-group">
-                <label for="firstname">Prénom</label>
-                <input type="text" id="firstname" name="firstname" required>
+    <header>
+        <nav>
+            <div class="logo">Camping Nature</div>
+            <div class="nav-links">
+                <a href="home.php">Accueil</a>
+                <a href="reservation.php">Réserver</a>
+                <?php if (isLoggedIn()): ?>
+                    <?php if (isset($_SESSION['role']) && ($_SESSION['role'] === 'admin' || $_SESSION['role'] === 'super_admin')): ?>
+                        <a href="admin.php">Espace Admin</a>
+                    <?php endif; ?>
+                    <a href="logout.php">Déconnexion</a>
+                    <span style="color:white;">Bonjour, <?= htmlspecialchars($_SESSION['username']) ?></span>
+                <?php else: ?>
+                    <a href="login.php">Connexion</a>
+                    <a href="register.php">Créer un compte</a>
+                <?php endif; ?>
             </div>
+        </nav>
+    </header>
+
+    <div class="main-content">
+        <div class="container">
+            <h1>Créer un compte</h1>
+            <p class="login-link">Ou <a href="login.php">connectez-vous à votre compte</a></p>
             
-            <div class="form-group">
-                <label for="lastname">Nom</label>
-                <input type="text" id="lastname" name="lastname" required>
-            </div>
+            <?php if ($error): ?>
+                <div class="error-message"><?= htmlspecialchars($error) ?></div>
+            <?php endif; ?>
             
-            <div class="form-group">
-                <label for="email">Adresse email</label>
-                <input type="email" id="email" name="email" required>
-            </div>
+            <hr>
             
-            <div class="form-group">
-                <label for="password">Mot de passe</label>
-                <input type="password" id="password" name="password" required>
-            </div>
+            <form method="post">
+                <div class="form-group">
+                    <label for="firstname">Prénom</label>
+                    <input type="text" id="firstname" name="firstname" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="lastname">Nom</label>
+                    <input type="text" id="lastname" name="lastname" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">Adresse email</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Mot de passe</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+                
+                <button type="submit" class="submit-btn">S'inscrire</button>
+            </form>
             
-            <button type="submit" class="submit-btn">S'inscrire</button>
-        </form>
-        
-        <hr>
+            <hr>
+        </div>
     </div>
 </body>
 </html>

@@ -105,6 +105,9 @@ $logged_in = isLoggedIn(); // Check login status without redirect
                 <a href="home.php">Accueil</a>
                 <a href="reservation.php">Réserver</a>
                 <?php if ($logged_in): ?>
+                    <?php if (isset($_SESSION['role']) && ($_SESSION['role'] === 'admin' || $_SESSION['role'] === 'super_admin')): ?>
+                        <a href="admin.php">Espace Admin</a>
+                    <?php endif; ?>
                     <a href="logout.php">Déconnexion</a>
                     <span style="color:white;">Bonjour, <?= htmlspecialchars($_SESSION['username']) ?></span>
                 <?php else: ?>
@@ -122,11 +125,8 @@ $logged_in = isLoggedIn(); // Check login status without redirect
         <?php if ($logged_in): ?>
             <h2><a href="reservation.php"><input type="submit" value="Réserver maintenant"></a></h2>
             
-            <?php if ($_SESSION['role'] === 'admin'): ?>
-                <div style="background: rgba(255,255,255,0.8); padding: 20px; margin-top: 30px;">
-                    <h2 style="color:#2a593d;">Espace Admin</h2>
-                    <p style="color:#495057;">Gestion des réservations | Gestion des utilisateurs</p>
-                </div>
+            <?php if ($_SESSION['role'] === 'admin' || 'super_admin' ): ?>
+                <h2><a href="admin.php"><input type="submit" value="Espace Administrateur"></a></h2>
             <?php endif; ?>
             
         <?php else: ?>
