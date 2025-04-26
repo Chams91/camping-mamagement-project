@@ -185,6 +185,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             text-align: center;
             margin-bottom: 20px;
         }
+        .paiement input[type="radio"] {
+    display: none;
+}
+
+.paiement label {
+    flex: 1 1 30%;
+    border: 2px solid #ccc;
+    border-radius: 8px;
+    padding: 15px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: white;
+    text-align: center;
+}
+
+.paiement label:hover {
+    border-color: #007bff;
+    background: #e9f5ff;
+}
+
+.paiement input[type="radio"]:checked + label {
+    border-color: #007bff;
+    background: #e9f5ff;
+    font-weight: bold;
+}
     </style>
 </head>
 <body>
@@ -253,12 +279,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <label for="mobile_home">Mobil-home<br><small>À partir de 100DT/nuit</small></label>
                     </div>
                 </div>
+                <div class="section">
+                <div class="section">
+    <h2>🧾 Services supplémentaires</h2>
+    <label><input type="checkbox" name="extras[]" value="velo"> Location de vélo</label>
+    <label><input type="checkbox" name="extras[]" value="barbecue"> Barbecue</label>
+    <label><input type="checkbox" name="extras[]" value="randonnée"> Randonnée accompagnée</label>
+    <label><input type="checkbox" name="extras[]" value="sport"> Activités sportives</label>
+    <label><input type="checkbox" name="extras[]" value="repas"> Repas inclus</label>
+</div>
+    <h2>💳 Mode de paiement</h2>
+    <div class="logement">
+        <input type="radio" id="credit_card" name="payment_method" value="carte" checked>
+        <label for="credit_card">Carte bancaire</label>
+
+        <input type="radio" id="cash" name="payment_method" value="cash">
+        <label for="cash">Paiement à l'arrivée</label>
+    </div>
+</div>
 
                 <button type="submit" class="btn">Vérifier la disponibilité</button>
+                <button type="reset" class="btn">annuler</button>
             </form>
         </div>
     </div>
-
+    
     <script>
         document.getElementById('arrival_date').addEventListener('change', function() {
             const arrivalDate = new Date(this.value);
