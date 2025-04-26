@@ -7,7 +7,8 @@ redirectIfNotLoggedIn();
 $error = '';
 $success = '';
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+// Handle reservation creation
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_reservation'])) {
     // Sanitize and validate input
     $item_type = $_POST['item_type'];
     $start_date = $_POST['arrival_date'];
@@ -78,7 +79,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ]);
 
                 if ($result) {
-                    $success = "Réservation effectuée avec succès et en attente de confirmation.";
+                    // Redirect to avoid form resubmission
+                    header("Location: reservation.php?success=1");
+                    exit();
                 } else {
                     $error = "Échec de la réservation. Veuillez réessayer.";
                 }
@@ -87,20 +90,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Handle reservation cancellation (user can delete their own reservations)
-if (isset($_GET['cancel'])) {
-    $reservation_id = intval($_GET['cancel']);
+// Handle reservation cancellation
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cancel_reservation'])) {
+    $reservation_id = intval($_POST['reservation_id']);
     // Verify that the reservation belongs to the logged-in user
     $stmt = $pdo->prepare("SELECT * FROM reservations WHERE id = ? AND user_id = ?");
     $stmt->execute([$reservation_id, $_SESSION['user_id']]);
     $reservation = $stmt->fetch();
 
     if ($reservation) {
-        // Only allow cancellation if reservation is not already confirmed or cancelled
+        // Only allow cancellation if reservation is pending
         if ($reservation['status'] === 'pending') {
             $stmt = $pdo->prepare("DELETE FROM reservations WHERE id = ?");
             if ($stmt->execute([$reservation_id])) {
-                $success = "Réservation annulée avec succès.";
+                // Redirect with success message
+                header("Location: reservation.php?cancel=1");
+                exit();
             } else {
                 $error = "Échec de l'annulation de la réservation.";
             }
@@ -135,25 +140,29 @@ $stmt = $pdo->prepare("SELECT r.*,
 $stmt->execute([$_SESSION['user_id']]);
 $user_reservations = $stmt->fetchAll();
 
-?>
+// Handle success messages from redirects
+if (isset($_GET['success']) && $_GET['success'] == 1) {
+    $success = "Réservation effectuée avec succès et en attente de confirmation.";
+}
 
+if (isset($_GET['cancel']) && $_GET['cancel'] == 1) {
+    $success = "Réservation annulée avec succès.";
+}
+?>
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Réservations</title>
+    <title>Réservations - Camping Nature</title>
     <style>
-        * {
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #eef2f3;
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
-            font-family: 'Arial', sans-serif;
-        }
-        
-        body {
-            background-color: #f8f9fa;
             color: #495057;
         }
-        
+
+        /* Navigation Bar Styles (Consistent with home.php) */
         header {
             background-color: #2a593d;
             padding: 20px 0;
@@ -178,6 +187,7 @@ $user_reservations = $stmt->fetchAll();
         .nav-links {
             display: flex;
             gap: 30px;
+            align-items: center;
         }
         
         .nav-links a {
@@ -191,22 +201,21 @@ $user_reservations = $stmt->fetchAll();
             color: #c8e6c9;
         }
 
-        /* Your existing reservation styles */
-        .main-content {
-            display: flex;
-            justify-content: center;
-            padding: 20px;
-            min-height: calc(100vh - 70px);
+        .nav-links span {
+            color: white;
+            font-size: 16px;
+            margin-left: 15px;
         }
 
+        /* Container Styles */
         .container {
             background: white;
             padding: 30px;
             border-radius: 12px;
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            max-width: 700px;
+            max-width: 900px;
             width: 100%;
-            margin: 20px 0;
+            margin: 20px auto;
         }
 
         h1 {
@@ -223,10 +232,34 @@ $user_reservations = $stmt->fetchAll();
             margin-bottom: 30px;
         }
 
+        /* Feedback Message Styles */
+        .error-message {
+            color: #d32f2f;
+            background-color: #f8d7da;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .success-message {
+            color: #155724;
+            background-color: #d4edda;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        /* Reservation Form Styles */
         .reservation-box {
             display: flex;
             flex-direction: column;
             gap: 20px;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
 
         .section {
@@ -234,71 +267,205 @@ $user_reservations = $stmt->fetchAll();
             flex-direction: column;
         }
 
+        .section h2 {
+            margin-bottom: 10px;
+            color: #2a593d;
+        }
+
         .section label {
             font-weight: 600;
             margin: 8px 0 5px;
         }
 
-        input[type="date"], select {
+        input[type="date"], select, input[type="radio"] + label {
+            width: 100%;
             padding: 12px;
             border: 1px solid #ccc;
             border-radius: 6px;
             font-size: 14px;
         }
 
-        .logement {
+        /* Payment Method Styling */
+        .paiement {
             display: flex;
+            flex-direction: row;
             gap: 15px;
-            justify-content: space-between;
-            flex-wrap: wrap;
         }
 
-        .logement input[type="radio"] {
+        .paiement label {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            cursor: pointer;
+            text-align: center;
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+
+        .paiement input[type="radio"] {
             display: none;
         }
 
-        .logement label {
-            flex: 1 1 30%;
-            border: 2px solid #ccc;
-            border-radius: 8px;
-            padding: 15px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            background: white;
-            text-align: center;
-        }
-
-        .logement label:hover {
-            border-color: #00a344;
-            background: #f0fdf4;
-        }
-
-        .logement input[type="radio"]:checked + label {
-            border-color: #00a344;
-            background: #f0fdf4;
+        .paiement input[type="radio"]:checked + label {
+            border-color: #007bff;
+            background: #e9f5ff;
             font-weight: bold;
         }
 
-        .btn {
-            background: #00a344;
-            color: white;
+        .paiement label:hover {
+            border-color: #007bff;
+            background: #f0f8ff;
+        }
+
+        /* Submit Button */
+        input[type="submit"] {
+            padding: 12px 20px;
+            background: #2a593d;
+            color: #fff;
             border: none;
-            padding: 15px;
-            border-radius: 8px;
-            font-size: 16px;
+            border-radius: 6px;
             cursor: pointer;
-            transition: 0.3s;
+            font-size: 16px;
+            transition: background-color 0.3s;
+            align-self: flex-start;
+        }
+
+        input[type="submit"]:hover {
+            background: #1e4628;
+        }
+
+        /* Tables */
+        .table-responsive {
             width: 100%;
+            overflow-x: auto;
         }
 
-        .btn:hover {
-            background: #008f3d;
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 20px;
         }
 
-        .error-message { color: red; }
-        .success-message { color: green; }
-        
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #2a593d;
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        /* Button Styles */
+        .action-btn {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            color: white;
+            font-size: 14px;
+            margin-right: 5px;
+            transition: background-color 0.3s;
+        }
+
+        .confirm-btn { background-color: #4CAF50; }
+        .confirm-btn:hover { background-color: #45a049; }
+
+        .cancel-btn { background-color: #f44336; }
+        .cancel-btn:hover { background-color: #da190b; }
+
+        .delete-btn { background-color: #555555; }
+        .delete-btn:hover { background-color: #333333; }
+
+        /* Form Container */
+        .form-container {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f2f2f2;
+            border-radius: 8px;
+        }
+
+        .form-container h3 {
+            margin-bottom: 15px;
+            color: #2a593d;
+        }
+
+        .form-container label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333333;
+            font-weight: bold;
+        }
+
+        .form-container input[type="text"],
+        .form-container input[type="number"],
+        .form-container select,
+        .form-container input[type="date"] {
+            width: 100%;
+            padding: 8px 12px;
+            margin: 8px 0 16px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .form-container input[type="submit"],
+        .form-container button {
+            background-color: #2a593d;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+
+        .form-container input[type="submit"]:hover,
+        .form-container button:hover {
+            background-color: #1e462a;
+        }
+
+        /* Responsive Styles */
+        @media (max-width: 768px) {
+            th, td {
+                padding: 8px;
+                font-size: 14px;
+            }
+
+            .action-btn {
+                padding: 6px 10px;
+                font-size: 12px;
+                margin-bottom: 5px;
+            }
+
+            h1 {
+                font-size: 28px;
+            }
+
+            h2 {
+                font-size: 20px;
+            }
+
+            .form-container input[type="submit"],
+            .form-container button {
+                font-size: 14px;
+                padding: 10px 16px;
+            }
+        }
+
+        /* Flex Container for Layout */
+        .main-content {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 20px;
+            min-height: calc(100vh - 70px); /* Adjust based on header height */
+        }
     </style>
 </head>
 <body>
@@ -310,10 +477,10 @@ $user_reservations = $stmt->fetchAll();
                 <a href="reservation.php">Réserver</a>
                 <?php if (isLoggedIn()): ?>
                     <?php if (isset($_SESSION['role']) && ($_SESSION['role'] === 'admin' || $_SESSION['role'] === 'super_admin')): ?>
-                        <a href="admin.php">Espace Admin</a>
+                        <a href="admin.php#manage_users">Espace Admin</a>
                     <?php endif; ?>
                     <a href="logout.php">Déconnexion</a>
-                    <span style="color:white;">Bonjour, <?= htmlspecialchars($_SESSION['username']) ?></span>
+                    <span>Bonjour, <?= htmlspecialchars($_SESSION['username']) ?></span>
                 <?php else: ?>
                     <a href="login.php">Connexion</a>
                     <a href="register.php">Créer un compte</a>
@@ -336,8 +503,9 @@ $user_reservations = $stmt->fetchAll();
             <?php endif; ?>
 
             <form method="post" class="reservation-box">
+                <input type="hidden" name="create_reservation" value="1">
                 <div class="section">
-                    <h2>📋 Type d'Item</h2>
+                    <h2>📋 Type de réservation</h2>
                     <label>
                         <input type="radio" name="item_type" value="location" required> Location
                     </label>
@@ -369,7 +537,7 @@ $user_reservations = $stmt->fetchAll();
                 </div>
 
                 <div class="section" id="item_selection" style="display:none;">
-                    <!-- This will be populated via JavaScript based on item_type -->
+                    <!-- Populated via JavaScript based on item_type -->
                 </div>
 
                 <div class="section">
@@ -387,10 +555,8 @@ $user_reservations = $stmt->fetchAll();
             </form>
 
             <h2>Vos Réservations</h2>
-            <?php if (count($user_reservations) === 0): ?>
-                <p>Vous n'avez aucune réservation.</p>
-            <?php else: ?>
-                <table border="1">
+            <div class="table-responsive">
+                <table>
                     <thead>
                         <tr>
                             <th>ID</th>
@@ -405,36 +571,54 @@ $user_reservations = $stmt->fetchAll();
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($user_reservations as $res): ?>
+                        <?php if (count($user_reservations) === 0): ?>
                             <tr>
-                                <td><?= htmlspecialchars($res['id']) ?></td>
-                                <td><?= htmlspecialchars($res['item_type']) ?></td>
-                                <td>
-                                    <?php 
-                                        if ($res['item_type'] === 'location') {
-                                            echo htmlspecialchars($res['location_type']);
-                                        } else {
-                                            echo htmlspecialchars($res['hebergement_name']);
-                                        }
-                                    ?>
-                                </td>
-                                <td><?= htmlspecialchars($res['start_date']) ?> au <?= htmlspecialchars($res['end_date']) ?></td>
-                                <td><?= htmlspecialchars($res['num_people']) ?></td>
-                                <td><?= number_format($res['total_price'], 2) ?></td>
-                                <td><?= htmlspecialchars($res['payment_method']) ?></td>
-                                <td><?= htmlspecialchars($res['status']) ?></td>
-                                <td>
-                                    <?php if ($res['status'] === 'pending'): ?>
-                                        <a href="reservation.php?cancel=<?= htmlspecialchars($res['id']) ?>" onclick="return confirm('Êtes-vous sûr de vouloir annuler cette réservation?')">Annuler</a>
-                                    <?php else: ?>
-                                        N/A
-                                    <?php endif; ?>
-                                </td>
+                                <td colspan="9" style="text-align:center;">Vous n'avez aucune réservation.</td>
                             </tr>
-                        <?php endforeach; ?>
+                        <?php else: ?>
+                            <?php foreach ($user_reservations as $res): ?>
+                                <tr>
+                                    <td><?= htmlspecialchars($res['id']) ?></td>
+                                    <td><?= htmlspecialchars(ucfirst($res['item_type'])) ?></td>
+                                    <td>
+                                        <?php 
+                                            if ($res['item_type'] === 'location') {
+                                                echo htmlspecialchars(ucfirst($res['location_type']));
+                                            } else {
+                                                echo htmlspecialchars($res['hebergement_name']);
+                                            }
+                                        ?>
+                                    </td>
+                                    <td><?= htmlspecialchars($res['start_date']) ?> au <?= htmlspecialchars($res['end_date']) ?></td>
+                                    <td><?= htmlspecialchars($res['num_people']) ?></td>
+                                    <td><?= number_format($res['total_price'], 2) ?></td>
+                                    <td>
+                                        <?php 
+                                            if ($res['payment_method'] === 'credit_card') {
+                                                echo "Carte Bancaire";
+                                            } else {
+                                                echo "Espèces";
+                                            }
+                                        ?>
+                                    </td>
+                                    <td><?= htmlspecialchars(ucfirst($res['status'])) ?></td>
+                                    <td>
+                                        <?php if ($res['status'] === 'pending'): ?>
+                                            <form method="post" style="display:inline;">
+                                                <input type="hidden" name="cancel_reservation" value="1">
+                                                <input type="hidden" name="reservation_id" value="<?= htmlspecialchars($res['id']) ?>">
+                                                <input type="submit" value="Annuler" class="action-btn cancel-btn" onclick="return confirm('Êtes-vous sûr de vouloir annuler cette réservation?');">
+                                            </form>
+                                        <?php else: ?>
+                                            N/A
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
                     </tbody>
                 </table>
-            <?php endif; ?>
+            </div>
         </div>
     </div>
 
@@ -451,7 +635,7 @@ $user_reservations = $stmt->fetchAll();
                         <select name="location_id" id="location_id" required>
                             <option value="">--Sélectionnez--</option>
                             <?php foreach ($locations as $loc): ?>
-                                <option value="<?= htmlspecialchars($loc['id']) ?>"><?= htmlspecialchars(ucfirst($loc['type'])) ?> - <?= htmlspecialchars($loc['price_per_night']) ?>€/nuit</option>
+                                <option value="<?= htmlspecialchars($loc['id']) ?>"><?= htmlspecialchars(ucfirst($loc['type'])) ?> - <?= htmlspecialchars(number_format($loc['price_per_night'], 2)) ?>€/nuit</option>
                             <?php endforeach; ?>
                         </select>
                     `;
@@ -464,7 +648,7 @@ $user_reservations = $stmt->fetchAll();
                         <select name="hebergement_id" id="hebergement_id" required>
                             <option value="">--Sélectionnez--</option>
                             <?php foreach ($hebergements as $heb): ?>
-                                <option value="<?= htmlspecialchars($heb['id']) ?>"><?= htmlspecialchars($heb['name']) ?> - <?= htmlspecialchars($heb['price']) ?>€/nuit</option>
+                                <option value="<?= htmlspecialchars($heb['id']) ?>"><?= htmlspecialchars($heb['name']) ?> - <?= htmlspecialchars(number_format($heb['price'], 2)) ?>€/nuit</option>
                             <?php endforeach; ?>
                         </select>
                     `;
@@ -472,6 +656,14 @@ $user_reservations = $stmt->fetchAll();
                     itemSelection.style.display = 'block';
                 }
             });
+        });
+
+        // Trigger the change event on page load if an item_type is already selected
+        window.addEventListener('load', function() {
+            var selected = document.querySelector('input[name="item_type"]:checked');
+            if (selected) {
+                selected.dispatchEvent(new Event('change'));
+            }
         });
     </script>
 </body>
