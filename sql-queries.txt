@@ -33,6 +33,9 @@ CREATE TABLE locations (
     type ENUM('tente', 'caravane', 'chalet') NOT NULL,
     price_per_night DECIMAL(10,2) NOT NULL,
     capacity INT NOT NULL,
+    equipments VARCHAR(255),
+    availability_start_date DATE NOT NULL,
+    availability_end_date DATE NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

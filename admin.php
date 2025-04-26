@@ -246,6 +246,168 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+//reservations management
+
+// Handle forms for managing reservations
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (isset($_POST['action'])) {
+        $action = $_POST['action'];
+        $reservation_id = intval($_POST['reservation_id']);
+
+        // Fetch the reservation
+        $stmt = $pdo->prepare("SELECT * FROM reservations WHERE id = ?");
+        $stmt->execute([$reservation_id]);
+        $reservation = $stmt->fetch();
+
+        if (!$reservation) {
+            $_SESSION['error_message'] = "Réservation non trouvée.";
+            header("Location: admin.php");
+            exit();
+        }
+
+        switch ($action) {
+            case 'confirm':
+                // Update status to confirmed
+                $stmt = $pdo->prepare("UPDATE reservations SET status = 'confirmed' WHERE id = ?");
+                if ($stmt->execute([$reservation_id])) {
+                    $_SESSION['success_message'] = "Réservation confirmée avec succès.";
+                } else {
+                    $_SESSION['error_message'] = "Échec de la confirmation de la réservation.";
+                }
+                break;
+
+            case 'cancel':
+                // Update status to cancelled
+                $stmt = $pdo->prepare("UPDATE reservations SET status = 'cancelled' WHERE id = ?");
+                if ($stmt->execute([$reservation_id])) {
+                    $_SESSION['success_message'] = "Réservation annulée avec succès.";
+                } else {
+                    $_SESSION['error_message'] = "Échec de l'annulation de la réservation.";
+                }
+                break;
+
+            case 'delete':
+                // Delete the reservation
+                $stmt = $pdo->prepare("DELETE FROM reservations WHERE id = ?");
+                if ($stmt->execute([$reservation_id])) {
+                    $_SESSION['success_message'] = "Réservation supprimée avec succès.";
+                } else {
+                    $_SESSION['error_message'] = "Échec de la suppression de la réservation.";
+                }
+                break;
+
+            case 'update':
+                // Update reservation details
+                // Get updated fields from POST
+                $item_type = $_POST['item_type'];
+                $location_id = isset($_POST['location_id']) ? intval($_POST['location_id']) : null;
+                $hebergement_id = isset($_POST['hebergement_id']) ? intval($_POST['hebergement_id']) : null;
+                $start_date = $_POST['start_date'];
+                $end_date = $_POST['end_date'];
+                $num_people = intval($_POST['num_people']);
+                $payment_method = $_POST['payment_method'];
+                $status = $_POST['status'];
+
+                // Calculate total_price
+                if ($item_type === 'location') {
+                    // Fetch price_per_night from locations
+                    $stmt_price = $pdo->prepare("SELECT price_per_night FROM locations WHERE id = ?");
+                    $stmt_price->execute([$location_id]);
+                    $location = $stmt_price->fetch();
+                    if ($location) {
+                        $price_per_night = floatval($location['price_per_night']);
+                    } else {
+                        $_SESSION['error_message'] = "Type de location sélectionné invalide.";
+                        header("Location: admin.php");
+                        exit();
+                    }
+                } elseif ($item_type === 'hebergement') {
+                    // Fetch price from hebergements
+                    $stmt_price = $pdo->prepare("SELECT price FROM hebergements WHERE id = ?");
+                    $stmt_price->execute([$hebergement_id]);
+                    $hebergement = $stmt_price->fetch();
+                    if ($hebergement) {
+                        $price_per_night = floatval($hebergement['price']);
+                    } else {
+                        $_SESSION['error_message'] = "Type d'hébergement sélectionné invalide.";
+                        header("Location: admin.php");
+                        exit();
+                    }
+                } else {
+                    $_SESSION['error_message'] = "Type d'item invalide.";
+                    header("Location: admin.php");
+                    exit();
+                }
+
+                // Calculate number of nights
+                $start = new DateTime($start_date);
+                $end = new DateTime($end_date);
+                $interval = $start->diff($end);
+                $num_nights = $interval->days;
+
+                if ($num_nights <= 0) {
+                    $_SESSION['error_message'] = "La durée du séjour doit être d'au moins une nuit.";
+                    header("Location: admin.php");
+                    exit();
+                }
+
+                // Calculate total price
+                $total_price = $price_per_night * $num_nights;
+
+                // Update the reservation
+                $stmt_update = $pdo->prepare("UPDATE reservations SET 
+                    item_type = ?, 
+                    location_id = ?, 
+                    hebergement_id = ?, 
+                    start_date = ?, 
+                    end_date = ?, 
+                    num_people = ?, 
+                    total_price = ?, 
+                    payment_method = ?, 
+                    status = ?
+                    WHERE id = ?");
+                $result = $stmt_update->execute([
+                    $item_type,
+                    $location_id,
+                    $hebergement_id,
+                    $start_date,
+                    $end_date,
+                    $num_people,
+                    $total_price,
+                    $payment_method,
+                    $status,
+                    $reservation_id
+                ]);
+
+                if ($result) {
+                    $_SESSION['success_message'] = "Réservation mise à jour avec succès.";
+                } else {
+                    $_SESSION['error_message'] = "Échec de la mise à jour de la réservation.";
+                }
+
+                break;
+
+            default:
+                $_SESSION['error_message'] = "Action invalide.";
+        }
+
+        header("Location: admin.php");
+        exit();
+    }
+}
+
+// Fetch all reservations
+$stmt = $pdo->query("SELECT r.*, 
+    u.username, 
+    l.type AS location_type, 
+    h.name AS hebergement_name 
+    FROM reservations r 
+    INNER JOIN users u ON r.user_id = u.id 
+    LEFT JOIN locations l ON r.location_id = l.id 
+    LEFT JOIN hebergements h ON r.hebergement_id = h.id 
+    ORDER BY r.created_at DESC");
+$reservations = $stmt->fetchAll();
+
 // Fetch all users, locations, and hébergements
 $users = getAllUsers();
 $locations = getAllLocations();
@@ -1009,6 +1171,82 @@ unset($_SESSION['success_message'], $_SESSION['error_message']);
                 </form>
             </div>
         </div>
+        <!-- -----------------------
+                 Réservations Management
+                 ------------------------ -->
+                 <h2>Gestion des Réservations</h2>
+
+                <?php if (isset($_SESSION['error_message'])): ?>
+                    <div class="error-message"><?= htmlspecialchars($_SESSION['error_message']) ?></div>
+                    <?php unset($_SESSION['error_message']); ?>
+                <?php endif; ?>
+
+                <?php if (isset($_SESSION['success_message'])): ?>
+                    <div class="success-message"><?= htmlspecialchars($_SESSION['success_message']) ?></div>
+                    <?php unset($_SESSION['success_message']); ?>
+                <?php endif; ?>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Utilisateur</th>
+                            <th>Type d'Item</th>
+                            <th>Item</th>
+                            <th>Dates</th>
+                            <th>Personnes</th>
+                            <th>Prix Total (€)</th>
+                            <th>Méthode de Paiement</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($reservations as $res): ?>
+                            <tr>
+                                <td><?= htmlspecialchars($res['id']) ?></td>
+                                <td><?= htmlspecialchars($res['username']) ?></td>
+                                <td><?= htmlspecialchars(ucfirst($res['item_type'])) ?></td>
+                                <td>
+                                    <?php 
+                                        if ($res['item_type'] === 'location') {
+                                            echo htmlspecialchars(ucfirst($res['location_type']));
+                                        } else {
+                                            echo htmlspecialchars($res['hebergement_name']);
+                                        }
+                                    ?>
+                                </td>
+                                <td><?= htmlspecialchars($res['start_date']) ?> au <?= htmlspecialchars($res['end_date']) ?></td>
+                                <td><?= htmlspecialchars($res['num_people']) ?></td>
+                                <td><?= number_format($res['total_price'], 2) ?></td>
+                                <td><?= htmlspecialchars($res['payment_method']) ?></td>
+                                <td><?= htmlspecialchars(ucfirst($res['status'])) ?></td>
+                                <td class="action-buttons">
+                                    <?php if ($res['status'] === 'pending'): ?>
+                                        <form method="post" style="display:inline;">
+                                            <input type="hidden" name="reservation_id" value="<?= htmlspecialchars($res['id']) ?>">
+                                            <input type="hidden" name="action" value="confirm">
+                                            <input type="submit" value="Confirmer">
+                                        </form>
+                                        <form method="post" style="display:inline;">
+                                            <input type="hidden" name="reservation_id" value="<?= htmlspecialchars($res['id']) ?>">
+                                            <input type="hidden" name="action" value="cancel">
+                                            <input type="submit" value="Annuler">
+                                        </form>
+                                    <?php endif; ?>
+                                    <form method="post" style="display:inline;">
+                                        <input type="hidden" name="reservation_id" value="<?= htmlspecialchars($res['id']) ?>">
+                                        <input type="hidden" name="action" value="delete">
+                                        <input type="submit" value="Supprimer" onclick="return confirm('Êtes-vous sûr de vouloir supprimer cette réservation?')">
+                                    </form>
+                                    <!-- Add a button to edit/update reservation if needed -->
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
     </div>
+
+
 </body>
 </html>
